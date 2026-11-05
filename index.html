@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bunker 07</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#0c1418;color:#e1eee9;font:15px system-ui,sans-serif}
+main{width:min(960px,96vw);margin:24px auto} header,footer,#hud{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header{margin-bottom:10px} .label,#hud{font: bold 13px monospace;letter-spacing:.09em;color:#9fe6c4}
+#stage{position:relative;border:1px solid #395a55;background:#101d22}
+canvas{width:100%;display:block;image-rendering:pixelated}
+#overlay{position:absolute;inset:0;display:grid;place-items:center;background:#081216b8;text-align:center;padding:12px}
+#overlay[hidden]{display:none} h1{font-size:clamp(30px,7vw,72px);line-height:1;margin:8px 0;letter-spacing:.05em}
+p{margin:10px auto 16px;max-width:380px} button{font:inherit;font-weight:bold;cursor:pointer;background:#a8efcc;color:#0b211a;border:0;padding:9px 14px}
+button:disabled{opacity:.45;cursor:default} #hud{padding:12px;background:#16272b} footer{margin-top:12px;color:#a4bbb5;font-size:13px}
+</style>
+<main>
+<header><strong>BUNKER 07</strong><span class="label">RETRO FPS / TRAINING SIM</span></header>
+<div id="stage">
+<canvas id="view" width="480" height="270" aria-label="First-person bunker view"></canvas>
+<div id="overlay"><section><div class="label">SECTOR 07</div><h1 id="title">BUNKER 07</h1><p id="message">Disable three security bots, then reach the green exit beacon.</p><button id="action">Start mission</button></section></div>
+</div>
+<div id="hud"><span id="health"></span><span id="ammo"></span><span id="bots"></span><span id="clock"></span></div>
+<footer><span>WASD move · Mouse or ← → aim · Click or Space fire · R reload · P pause</span><button id="export" disabled>Export session CSV</button></footer>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const canvas = $('view'), ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height, FOV = 0.68;
+const map = [
+  '#############',
+  '#...........#',
+  '#..##.###...#',
+  '#.....#.....#',
+  '#.##..#..##.#',
+  '#...........#',
+  '#..###.##...#',
+  '#......#....#',
+  '#...........#',
+  '#############'
+];
+const exit = {x:11.5,y:1.5};
+const keys = new Set(), depth = new Float64Array(W), events = [];
+let player, enemies, mode = 'ready', time, last = 0, flash, hurt, cooldown, shots, hits, run = 0;
+
+function reset() {
+  player = {x:1.5,y:8.5,angle:0,hp:100,ammo:8};
+  enemies = [{x:5.5,y:8.5},{x:9.5,y:5.5},{x:9.5,y:1.5}]
+    .map(bot => ({...bot,hp:2,attack:0.8}));
+  time = flash = hurt = cooldown = shots = hits = 0;
+}
+function log(event, target = '') {
+  events.push([run,time.toFixed(2),event,target,player.hp,player.ammo,shots,hits]);
+  $('export').disabled = false;
+}
+function wall(x,y) {
+  return (map[Math.floor(y)]?.[Math.floor(x)] ?? '#') === '#';
+}
+function move(body,dx,dy) {
+  const fits = (x,y) => [-0.18,0.18].every(a => [-0.18,0.18].every(b => !wall(x+a,y+b)));
+  if (fits(body.x+dx,body.y)) body.x += dx;
+  if (fits(body.x,body.y+dy)) body.y += dy;
+}
+// Grid traversal returns distance along the ray to the first wall.
+function ray(x,y,dx,dy) {
+  let mx = Math.floor(x), my = Math.floor(y);
+  const sx = dx < 0 ? -1 : 1, sy = dy < 0 ? -1 : 1;
+  const ax = Math.abs(1/dx), ay = Math.abs(1/dy);
+  let tx = dx === 0 ? Infinity : (dx < 0 ? x-mx : mx+1-x)*ax;
+  let ty = dy === 0 ? Infinity : (dy < 0 ? y-my : my+1-y)*ay;
+  let dist, side;
+  do {
+    if (tx < ty) { dist = tx; tx += ax; mx += sx; side = 0; }
+    else { dist = ty; ty += ay; my += sy; side = 1; }
+  } while (!wall(mx,my));
+  const hit = side ? x+dx*dist : y+dy*dist;
+  return {dist,side,edge:hit-Math.floor(hit)};
+}
+function remaining() { return enemies.filter(bot => bot.hp > 0).length; }
+function shoot() {
+  if (mode !== 'play' || cooldown > 0 || player.ammo === 0) return;
+  player.ammo--; shots++; cooldown = 0.24; flash = 0.10;
+  const dx = Math.cos(player.angle), dy = Math.sin(player.angle);
+  let nearest = ray(player.x,player.y,dx,dy).dist, target;
+  for (const bot of enemies) {
+    if (bot.hp <= 0) continue;
+    const x = bot.x-player.x, y = bot.y-player.y;
+    const forward = x*dx+y*dy, offset = Math.abs(x*dy-y*dx);
+    if (forward > 0 && forward < nearest && offset < 0.28) {
+      nearest = forward; target = bot;
+    }
+  }
+  if (target) { target.hp--; hits++; }
+  log('shot',target ? enemies.indexOf(target)+1 : '');
+  if (target?.hp === 0) log('bot_disabled',enemies.indexOf(target)+1);
+}
+function overlay(title,message,button) {
+  $('title').textContent = title;
+  $('message').textContent = message;
+  $('action').textContent = button;
+  $('overlay').hidden = false;
+  keys.clear();
+  if (document.pointerLockElement === canvas) document.exitPointerLock();
+}
+function pause() {
+  if (mode !== 'play') return;
+  mode = 'pause';
+  overlay('PAUSED','Resume to continue your current run.','Resume');
+}
+function finish(won) {
+  mode = 'finished'; log(won ? 'mission_clear' : 'mission_failed');
+  const accuracy = shots ? Math.round(100*hits/shots) : 0;
+  overlay(won ? 'MISSION CLEAR' : 'MISSION FAILED',
+    `${time.toFixed(1)} seconds · ${hits}/${shots} hits · ${accuracy}% accuracy`,'Play again');
+}
+function update(dt) {
+  time += dt;
+  cooldown = Math.max(0,cooldown-dt);
+  flash = Math.max(0,flash-dt);
+  hurt = Math.max(0,hurt-dt);
+  player.angle += (Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft')))*2.1*dt;
+  const dx = Math.cos(player.angle), dy = Math.sin(player.angle);
+  const forward = Number(keys.has('KeyW'))-Number(keys.has('KeyS'));
+  const strafe = Number(keys.has('KeyD'))-Number(keys.has('KeyA'));
+  const speed = 2.65*dt/(Math.hypot(forward,strafe)||1);
+  move(player,(dx*forward-dy*strafe)*speed,(dy*forward+dx*strafe)*speed);
+  for (const bot of enemies) {
+    if (bot.hp <= 0) continue;
+    const x = player.x-bot.x, y = player.y-bot.y, distance = Math.hypot(x,y);
+    if (distance > 7 || (distance > 0 && ray(bot.x,bot.y,x/distance,y/distance).dist < distance)) continue;
+    if (distance > 0.8) move(bot,x/distance*0.85*dt,y/distance*0.85*dt);
+    bot.attack -= dt;
+    if (distance < 1.15 && bot.attack <= 0) {
+      bot.attack = 0.9;
+      player.hp = Math.max(0,player.hp-12);
+      hurt = 0.22;
+      log('damage',enemies.indexOf(bot)+1);
+      if (!player.hp) { finish(false); return; }
+    }
+  }
+  if (!remaining() && Math.hypot(player.x-exit.x,player.y-exit.y) < 0.6) finish(true);
+}
+function render() {
+  const dx = Math.cos(player.angle), dy = Math.sin(player.angle);
+  ctx.fillStyle = '#172831'; ctx.fillRect(0,0,W,H/2);
+  for (let y = H/2; y < H; y++) {
+    const tone = Math.floor(15+(y-H/2)*0.17);
+    ctx.fillStyle = `rgb(${tone},${tone+7},${tone+8})`;
+    ctx.fillRect(0,y,W,1);
+  }
+  for (let column = 0; column < W; column++) {
+    const plane = (2*(column+0.5)/W-1)*FOV;
+    const {dist,side,edge} = ray(player.x,player.y,dx-dy*plane,dy+dx*plane);
+    depth[column] = dist;
+    const height = H/dist, top = (H-height)/2;
+    const seam = edge < 0.035 || edge > 0.965;
+    const light = Math.floor(130/(1+dist*0.23)*(side ? 0.73 : 1)*(seam ? 0.62 : 1));
+    ctx.fillStyle = `rgb(${light*0.55},${light+12},${light+17})`;
+    ctx.fillRect(column,top,1,height);
+    ctx.fillStyle = '#06181d50';
+    for (const band of [0.08,0.35,0.67,0.92]) ctx.fillRect(column,top+height*band,1,Math.max(1,height*0.015));
+  }
+  const unlocked = remaining() === 0;
+  const objects = [...enemies.filter(bot => bot.hp>0),{...exit,beacon:true}].map(object => {
+    const x = object.x-player.x, y = object.y-player.y;
+    return {...object,z:x*dx+y*dy,side:y*dx-x*dy};
+  }).filter(object => object.z>0.15).sort((a,b) => b.z-a.z);
+  for (const object of objects) {
+    const center = W/2*(1+object.side/(FOV*object.z)), size = H/object.z;
+    const width = size*(object.beacon ? 0.27 : 0.48);
+    for (let col = Math.max(0,Math.floor(center-width/2)); col < Math.min(W,center+width/2); col++) {
+      if (depth[col] < object.z) continue;
+      const u = (col-center)/width;
+      if (object.beacon) {
+        ctx.fillStyle = unlocked ? '#53ed9b' : '#e68a43';
+        ctx.fillRect(col,H/2-size*0.26,1,size*0.70);
+        ctx.fillStyle = '#14292a';
+        ctx.fillRect(col,H/2+size*0.14,1,size*0.035);
+        continue;
+      }
+      ctx.fillStyle = Math.abs(u)<0.35 ? '#d18a57' : '#794c36';
+      ctx.fillRect(col,H/2-size*0.12,1,size*0.41);
+      if (Math.abs(u)<0.36) {
+        ctx.fillStyle = '#d7b899'; ctx.fillRect(col,H/2-size*0.30,1,size*0.18);
+        ctx.fillStyle = '#332627'; ctx.fillRect(col,H/2-size*0.25,1,size*0.065);
+        if (Math.abs(u)>0.08 && Math.abs(u)<0.25) {
+          ctx.fillStyle = '#ff503b'; ctx.fillRect(col,H/2-size*0.24,1,size*0.04);
+        }
+      }
+      if (Math.abs(u)>0.10 && Math.abs(u)<0.37) {
+        ctx.fillStyle = '#765447'; ctx.fillRect(col,H/2+size*0.29,1,size*0.18);
+      }
+    }
+  }
+  const gunY = H-61+flash*110;
+  ctx.fillStyle = '#0e171b'; ctx.fillRect(W/2-29,gunY+28,58,45);
+  ctx.fillStyle = '#394b53'; ctx.fillRect(W/2-17,gunY,34,52);
+  ctx.fillStyle = '#73909a'; ctx.fillRect(W/2-10,gunY,20,29);
+  ctx.fillStyle = '#132228'; ctx.fillRect(W/2-6,gunY+2,12,8);
+  if (flash) {
+    ctx.fillStyle = '#ffbf60'; ctx.fillRect(W/2-12,gunY-18,24,18);
+    ctx.fillStyle = '#fff4ae'; ctx.fillRect(W/2-5,gunY-23,10,22);
+  }
+  if (hurt) {ctx.fillStyle = '#ed3b3b47'; ctx.fillRect(0,0,W,H);}
+  ctx.fillStyle = '#e7fff2'; ctx.fillRect(W/2-5,H/2,11,1); ctx.fillRect(W/2,H/2-5,1,11);
+  $('health').textContent = `HEALTH ${player.hp}`;
+  $('ammo').textContent = player.ammo ? `AMMO ${player.ammo}/8` : 'AMMO 0 · PRESS R';
+  $('bots').textContent = unlocked ? 'EXIT OPEN · GREEN BEACON' : `BOTS LEFT ${remaining()}`;
+  $('clock').textContent = `${Math.floor(time)}s`;
+}
+function frame(now) {
+  const dt = Math.min(0.04,(now-last)/1000);
+  last = now;
+  if (mode === 'play') update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+function lockMouse() {
+  try { canvas.requestPointerLock?.()?.catch(() => {}); } catch {}
+}
+$('action').onclick = () => {
+  if (mode !== 'pause') { reset(); run++; log('mission_start'); }
+  $('overlay').hidden = true; mode = 'play'; $('action').blur(); lockMouse();
+};
+canvas.onclick = () => {
+  if (mode !== 'play') return;
+  if (document.pointerLockElement !== canvas) lockMouse();
+  shoot();
+};
+document.addEventListener('mousemove', event => {
+  if (mode === 'play' && document.pointerLockElement === canvas) player.angle += event.movementX*0.003;
+});
+let wasLocked = false;
+document.addEventListener('pointerlockchange', () => {
+  const locked = document.pointerLockElement === canvas;
+  if (wasLocked && !locked) pause();
+  wasLocked = locked;
+});
+window.addEventListener('blur',pause);
+window.addEventListener('keydown', event => {
+  if (mode !== 'play') return;
+  const code = event.code;
+  if (['ArrowLeft','ArrowRight','Space'].includes(code)) event.preventDefault();
+  keys.add(code);
+  if (event.repeat) return;
+  if (code === 'Space') shoot();
+  if (code === 'KeyR' && player.ammo < 8) { player.ammo = 8; log('reload'); }
+  if (code === 'KeyP' || code === 'Escape') pause();
+});
+window.addEventListener('keyup',event => keys.delete(event.code));
+$('export').onclick = () => {
+  const rows = ['run,elapsed_seconds,event,bot_id,health,ammo,shots,hits',...events.map(row => row.join(','))];
+  const url = URL.createObjectURL(new Blob([rows.join('\r\n')],{type:'text/csv'}));
+  const link = document.createElement('a');
+  link.href = url; link.download = 'bunker-07-session.csv'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+};
+reset();
+requestAnimationFrame(frame);
+</script>
+</html>
