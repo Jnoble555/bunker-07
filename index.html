@@ -11,6 +11,13 @@ header{margin-bottom:10px} .label,#hud{font: bold 13px monospace;letter-spacing:
 canvas{width:100%;display:block;image-rendering:pixelated}
 #overlay{position:absolute;inset:0;display:grid;place-items:center;background:#081216b8;text-align:center;padding:12px}
 #overlay[hidden]{display:none} h1{font-size:clamp(30px,7vw,72px);line-height:1;margin:8px 0;letter-spacing:.05em}
+#stage:has(#results:not([hidden])){min-height:240px}
+#results{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px auto;max-width:420px}
+#results[hidden]{display:none}
+#results div{padding:8px;background:#16272b;border:1px solid #395a55}
+#results dt{font: bold 11px monospace;color:#9fe6c4;text-transform:uppercase}
+#results dd{margin:4px 0 0;font-weight:bold}
+#result-export{margin-left:4px}
 p{margin:10px auto 16px;max-width:380px} button{font:inherit;font-weight:bold;cursor:pointer;background:#a8efcc;color:#0b211a;border:0;padding:9px 14px}
 button:disabled{opacity:.45;cursor:default} #hud{padding:12px;background:#16272b} footer{margin-top:12px;color:#a4bbb5;font-size:13px}
 </style>
@@ -18,7 +25,12 @@ button:disabled{opacity:.45;cursor:default} #hud{padding:12px;background:#16272b
 <header><strong>BUNKER 07</strong><span class="label">RETRO FPS / TRAINING SIM</span></header>
 <div id="stage">
 <canvas id="view" width="480" height="270" aria-label="First-person bunker view"></canvas>
-<div id="overlay"><section><div class="label">SECTOR 07</div><h1 id="title">BUNKER 07</h1><p id="message">Disable three security bots, then reach the green exit beacon.</p><button id="action">Start mission</button></section></div>
+<div id="overlay"><section><div class="label">SECTOR 07</div><h1 id="title">BUNKER 07</h1><p id="message">Disable three security bots, then reach the green exit beacon.</p><dl id="results" hidden>
+  <div><dt>Time played</dt><dd id="result-time"></dd></div>
+  <div><dt>Accuracy</dt><dd id="result-accuracy"></dd></div>
+  <div><dt>Bots disabled</dt><dd id="result-bots"></dd></div>
+</dl><button id="action">Start mission</button>
+<button id="result-export" hidden>Export session CSV</button></section></div>
 </div>
 <div id="hud"><span id="health"></span><span id="ammo"></span><span id="bots"></span><span id="clock"></span></div>
 <footer><span>WASD move · Mouse or ← → aim · Click or Space fire · R reload · P pause</span><button id="export" disabled>Export session CSV</button></footer>
@@ -110,9 +122,15 @@ function pause() {
 }
 function finish(won) {
   mode = 'finished'; log(won ? 'mission_clear' : 'mission_failed');
-  const accuracy = shots ? Math.round(100*hits/shots) : 0;
+  $('result-time').textContent = `${time.toFixed(1)} s`;
+  $('result-accuracy').textContent = shots
+    ? `${Math.round(100*hits/shots)}% (${hits}/${shots})`
+    : 'No shots';
+  $('result-bots').textContent = `${enemies.length-remaining()}/${enemies.length}`;
+  $('results').hidden = false;
+  $('result-export').hidden = false;
   overlay(won ? 'MISSION CLEAR' : 'MISSION FAILED',
-    `${time.toFixed(1)} seconds · ${hits}/${shots} hits · ${accuracy}% accuracy`,'Play again');
+    won ? 'You reached the exit.' : 'Your health reached zero.', 'Play again');
 }
 function update(dt) {
   time += dt;
@@ -221,6 +239,8 @@ function lockMouse() {
 }
 $('action').onclick = () => {
   if (mode !== 'pause') { reset(); run++; log('mission_start'); }
+  $('results').hidden = true;
+  $('result-export').hidden = true;
   $('overlay').hidden = true; mode = 'play'; $('action').blur(); lockMouse();
 };
 canvas.onclick = () => {
@@ -249,13 +269,15 @@ window.addEventListener('keydown', event => {
   if (code === 'KeyP' || code === 'Escape') pause();
 });
 window.addEventListener('keyup',event => keys.delete(event.code));
-$('export').onclick = () => {
+function exportSession() {
   const rows = ['run,elapsed_seconds,event,bot_id,health,ammo,shots,hits',...events.map(row => row.join(','))];
   const url = URL.createObjectURL(new Blob([rows.join('\r\n')],{type:'text/csv'}));
   const link = document.createElement('a');
   link.href = url; link.download = 'bunker-07-session.csv'; link.click();
   setTimeout(() => URL.revokeObjectURL(url),1000);
-};
+}
+$('export').onclick = exportSession;
+$('result-export').onclick = exportSession;
 reset();
 requestAnimationFrame(frame);
 </script>
