@@ -1,5 +1,7 @@
 # Campaign migration checkpoint — paused before merge
 
+**Historical checkpoint:** subsequent finalization and cleanup verification are documented in [campaign-release.md](campaign-release.md). The open items below describe the state when usage paused, not the final release candidate.
+
 Branch: `migration/godot-campaign`, based on `af85238`. User requested a stop near the usage limit. This is an **in-progress campaign preview**, not a completed parity certification. Main/browser runtime and browser tests remain unchanged.
 
 ## Implemented

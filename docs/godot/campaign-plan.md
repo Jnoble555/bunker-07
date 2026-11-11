@@ -14,9 +14,9 @@ Browser source remains authoritative and untouched. Starting point `af85238`; ex
 
 ## Acceptance checklist
 
-- [ ] Three reference maps, spawns, objectives, progression, retry and final summary.
-- [ ] Scout, armored, turret; alarm single reinforcement; investigation, occlusion, windup/stagger/pause.
-- [ ] Camera, shooting devices, service power, bulkhead safety, one-use overload.
-- [ ] Intel/cache/journal/rank and success-only consequences into Blackout.
-- [ ] Settings, onboarding, menus, session CSV and feedback.
-- [ ] Godot import/native regression and rendered evidence; browser source preserved.
+- [x] Three reference maps, spawns, objectives, progression, retry and final summary.
+- [x] Scout, armored, turret; alarm single reinforcement; investigation, occlusion, windup/stagger/pause.
+- [x] Camera, shooting devices, service power, bulkhead safety, one-use overload.
+- [x] Intel/cache/journal/rank and success-only consequences into Blackout.
+- [x] Settings, onboarding, menus, session CSV and feedback.
+- [x] Godot import/native regression and rendered evidence; browser source preserved.

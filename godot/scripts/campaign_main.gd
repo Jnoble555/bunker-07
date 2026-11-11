@@ -36,9 +36,11 @@ var volume_slider: HSlider
 var sensitivity_slider: HSlider
 var mute_check: CheckBox
 var return_state: String = "title"
+var quitting: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().auto_accept_quit = false
 	_install_inputs()
 	player = PlayerScript.new()
 	player.name = "Player"
@@ -52,6 +54,28 @@ func _ready() -> void:
 	super._build_ui()
 	_build_campaign_ui()
 	show_title()
+
+func _exit_tree() -> void:
+	# Explicitly detach streams before the audio server outlives scene teardown.
+	if audio: audio.shutdown()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_quit_safely()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		super._notification(what)
+
+func _quit_safely() -> void:
+	if quitting: return
+	quitting = true
+	active = false
+	pending_actions.clear()
+	get_tree().paused = true
+	if audio: audio.shutdown()
+	# The mixer releases stopped playbacks asynchronously; keep the event loop
+	# alive briefly rather than exiting during the same audio command batch.
+	await get_tree().create_timer(0.15,true).timeout
+	get_tree().quit()
 
 func _load_mission() -> void:
 	mission = missions[mission_index].duplicate(true)
@@ -158,12 +182,6 @@ func start_run() -> void:
 	player.reset_player()
 	player.global_position = mission.spawn
 	systems.reset()
-	if mission.id=="breach": session.note("BREACH LOG: Scouts are fast but lightly armored. Break sight around corners.")
-	elif mission.id=="blackout":
-		session.note("BLACKOUT LOG: Backup power is independent of turret security.")
-		if session.decisions.security_disabled: session.note("SECURITY LINK: Control Room shutdown disabled the extraction turret.")
-		elif session.decisions.alarm_raised: session.note("SECURITY LINK: The alarm deployed an armored pursuit unit.")
-		if session.decisions.intel: session.note("RECOVERED INTEL: Find backup power in the southwest bay. Turrets cannot move.")
 	attempts += 1
 	register_event("mission_start","")
 	last_result = {}

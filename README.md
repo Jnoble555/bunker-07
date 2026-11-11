@@ -1,6 +1,6 @@
 # Bunker 07
 
-An **in-progress Godot campaign port** is available in [`godot/`](godot/README.md). The browser version below remains the behavioral reference. See the [current campaign checkpoint](docs/godot/campaign-checkpoint.md); the [M1 checklist](docs/godot/parity.md) and [M1 verification](docs/godot/verification.md) describe the earlier Control Room milestone.
+A **three-mission Godot campaign preview** is available in [`godot/`](godot/README.md), including reactive security, tactical devices, optional objectives and campaign consequences. The browser version below remains the behavioral reference. See [native parity and limits](docs/godot/parity.md) and [release verification](docs/godot/campaign-release.md).
 
 ### [▶ Play Bunker 07 in your browser](https://jnoble555.github.io/bunker-07/)
 

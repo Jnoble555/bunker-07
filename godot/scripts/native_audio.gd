@@ -34,6 +34,7 @@ func play(kind: String, at: Vector3 = Vector3.INF) -> void:
 		var oldest: AudioStreamPlayer3D = _voices.pop_front()
 		if is_instance_valid(oldest):
 			oldest.stop()
+			oldest.stream = null
 			oldest.queue_free()
 	var voice := AudioStreamPlayer3D.new()
 	voice.name = "Sound_" + kind
@@ -60,8 +61,14 @@ func stop_all() -> void:
 	for voice: AudioStreamPlayer3D in _voices:
 		if is_instance_valid(voice):
 			voice.stop()
+			voice.stream = null
 			voice.queue_free()
 	_voices.clear()
+
+func shutdown() -> void:
+	stop_all()
+	_streams.clear()
+	controller = null
 
 func _prune() -> void:
 	var alive: Array[AudioStreamPlayer3D] = []

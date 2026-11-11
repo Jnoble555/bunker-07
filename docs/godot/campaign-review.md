@@ -6,9 +6,9 @@ Review/test ownership was agreed in `campaign-plan.md` before implementation. Th
 
 ## Executed status
 
-The independent campaign test script passed Godot parser validation, then the combined native campaign run passed **51 checks, zero failures**, exit 0, on installed Godot 4.7.2 stable. Results are saved in `godot/tests/campaign-results.json`. This is a freshly executed native run, not an inference from saved M1/browser reports.
+The independent campaign test script passed Godot parser validation. After resuming checkpoint `d3c6aa0`, the reviewer freshly reran the combined native campaign suite: **51 checks, zero failures**, exit 0, on installed Godot 4.7.2 stable. It emitted no runtime or ObjectDB warning. Results are saved in `godot/tests/campaign-results.json`. This is executed native evidence, not an inference from saved M1/browser reports.
 
-Root separately reports the retained M1 mechanics suite passed 46 checks after isolating new camera/lamp targets from the old guard-only scenarios. Root observed three ObjectDB instances reported leaked at M1 test exit; the campaign run reviewed here did not emit that warning. Its cause is **unresolved**, and no further long run was performed after the user's immediate pause/usage-limit request. Do not treat this checkpoint as final release approval.
+Root separately reports the retained M1 mechanics suite passed 46 checks after isolating new camera/lamp targets from the old guard-only scenarios. An earlier M1 exit warning named three audio playback/stream objects rather than leaked game nodes. Root diagnosed asynchronous mixer release, detached voice streams and cached resources explicitly, and allowed the event loop a short cleanup drain; its final verbose 46-check run exited cleanly. The reviewer inspected that shutdown path and independently executed `close_smoke.gd` with alarm/fire sound active: gameplay stopped and the process exited 0 with no runtime or ObjectDB warning. The root's actual window-close handler pauses gameplay and performs the same bounded drain while its timer remains active during pause.
 
 ## Harness coverage
 
@@ -26,7 +26,11 @@ Confirmed findings fixed before the passing campaign run:
 
 One initial Blackout traversal assertion rejected the valid final `summary` menu because a shared helper accepted only `result`; the helper was corrected without changing valid gameplay. Duplicate device-use audio was also identified and root coordinated its removal.
 
-No further gameplay blocker was found within inspected/tested coverage, but the exit-time ObjectDB warning above and final post-checkpoint integration review remain open. Browser runtime/test/style/index source diff was empty during review. The latest root feedback/audio tweaks made after the 51-check run have not been freshly certified by this reviewer.
+Final combined source review includes post-checkpoint hit feedback, pausable impact tweens, role attack/step sound hooks, settings lifecycle, successful consequence commits, and CSV adapters. Physics queries consider nearest world/body/area hits and apply positive target-center depth before the nearest wall; enemy hits increment before disable callbacks. Audio voices are finite, capped and detached on retry; explicit exit shutdown was also inspected. No new functional blocker was found within this coverage.
+
+The final source-only spot check also confirmed that mission journal notes now come from the authoritative encounter module once per attempt, and visible turrets rotate toward the player without changing their stationary movement, attack timing or damage. No new blocker was found in those presentation fixes; root owns the subsequent combined validation runs.
+
+Browser runtime/test/style/index source diff against `af85238` was empty during final review. **No remaining blocking defect was found within the implemented and tested campaign scope.** This signoff is bounded by the checks and limits described here; it does not guarantee zero bugs or exact visual/audio equivalence to the browser. The 51-check run preceded the shutdown-only adjustment; that affected lifecycle path was separately inspected and verified by the independent close smoke test rather than claiming a redundant full campaign rerun.
 
 ## Limits
 

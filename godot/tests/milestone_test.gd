@@ -279,4 +279,7 @@ func run() -> void:
 	game.set_paused(false)
 	game.queue_free()
 	await process_frame
+	# Audio-server stop/release commands are mixed asynchronously after Node teardown.
+	# Do not terminate the process on the same frame as the final scene deletion.
+	await create_timer(0.15, true).timeout
 	quit(1 if failed else 0)

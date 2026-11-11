@@ -168,6 +168,8 @@ func _physics_process(delta: float) -> void:
 func _update_combat(target_player: Node3D, alarm: bool, delta: float) -> void:
 	var separation: float = _horizontal_distance(global_position, target_player.global_position)
 	var visible: bool = separation > 0.0 and separation <= 14.0 and _can_see(target_player)
+	if role == "turret" and visible:
+		facing = atan2(target_player.global_position.z-global_position.z, target_player.global_position.x-global_position.x)
 	if attack_windup > 0.0:
 		if not visible or separation >= attack_range:
 			attack_windup = 0.0
