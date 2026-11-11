@@ -78,7 +78,7 @@ func build(config: Dictionary = {}) -> void:
 		_make_core()
 		_make_control_devices()
 		_label("DIRECT / SECURITY", Vector3(3.1, 2.25, 11), Vector3.ZERO, Color("dfb265"))
-		_label("MAINTENANCE / PANEL", Vector3(10.7, 2.23, 15), Vector3.ZERO, Color("8ed5c8"))
+		_label("MAINTENANCE", Vector3(9, 1.62, 15.8), Vector3.ZERO, Color("8ed5c8"), self, 28, 0.0015, 3)
 		_mesh_box(self, "EquipmentRack", Vector3(13.4, 0.9, 11.68), Vector3(0.72, 1.8, 0.32), _materials["steel"])
 		for i in 5:
 			_mesh_box(self, "RackVent", Vector3(13.4, 0.36 + i * 0.27, 11.5), Vector3(0.55, 0.08, 0.015), _materials["dark"])
@@ -106,7 +106,7 @@ func set_panel_disabled(value: bool) -> void:
 	if is_instance_valid(_panel_screen):
 		_panel_screen.material_override = _materials["off"] if value else _panel_on_material
 	if is_instance_valid(_panel_light):
-		_panel_light.light_energy = 0.12 if value else 0.75
+		_panel_light.light_energy = (0.04 if mission_id == "control-room" else 0.12) if value else (0.22 if mission_id == "control-room" else 0.75)
 
 func set_core_collected(value: bool) -> void:
 	var core: Node3D = get_node_or_null("Core")
@@ -250,7 +250,7 @@ func _make_panel() -> void:
 		console.name = "ConsoleVisual"
 		panel.add_child(console)
 		_panel_screen = console.get_node("RecessedDisplay") as MeshInstance3D
-		_panel_on_material = _emissive(Color("70d6bf"), 0.55)
+		_panel_on_material = _emissive(Color("5c978a"), 0.14)
 		_panel_screen.material_override = _panel_on_material
 	else:
 		_mesh_box(panel, "Stand", Vector3(0, 0.54, 0), Vector3(0.62, 1.08, 0.4), _materials["steel"])
@@ -258,8 +258,13 @@ func _make_panel() -> void:
 		_panel_screen = _mesh_box(panel, "Screen", Vector3(-0.383, 1.23, 0), Vector3(0.014, 0.3, 0.2), _materials["cyan"])
 		for i in 3:
 			_mesh_box(panel, "Key", Vector3(-0.326, 0.87, -0.1 + i * 0.1), Vector3(0.022, 0.07, 0.055), _materials["hazard"])
-	_panel_light = _light(_panel_position + Vector3(-0.6, 1.85, 0), Color("62dac5"), 0.75, 4.5)
-	_label("E / BACKUP POWER" if mission_id == "blackout" else "E / ALARM PANEL", _panel_position + Vector3(0, 1.9, 0), Vector3.ZERO, Color("8ed5c8"))
+	var control_console: bool = mission_id == "control-room"
+	_panel_light = _light(_panel_position + Vector3(-0.6, 1.85, 0), Color("7fa99b") if control_console else Color("62dac5"), 0.22 if control_console else 0.75, 3.0 if control_console else 4.5)
+	if control_console:
+		# E remains in the HUD's close-range prompt; this small world label is only a locator.
+		_label("ALARM PANEL", _panel_position + Vector3(0, 1.62, -0.8), Vector3.ZERO, Color("8ed5c8"), self, 30, 0.0018, 3)
+	else:
+		_label("E / BACKUP POWER", _panel_position + Vector3(0, 1.9, 0), Vector3.ZERO, Color("8ed5c8"))
 
 func _make_core() -> void:
 	var core := Node3D.new()
@@ -395,16 +400,16 @@ func _light(pos: Vector3, color: Color, energy: float, radius: float) -> OmniLig
 	add_child(light)
 	return light
 
-func _label(text: String, pos: Vector3, _degrees: Vector3, color: Color, parent: Node3D = self) -> Label3D:
+func _label(text: String, pos: Vector3, _degrees: Vector3, color: Color, parent: Node3D = self, font_size: int = 44, pixel_size: float = 0.0032, outline_size: int = 8) -> Label3D:
 	var label := Label3D.new()
 	label.text = text
 	label.position = pos
 	# Camera-facing text avoids mirrored backs while still respecting 3D wall depth.
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 44
-	label.pixel_size = 0.0032
+	label.font_size = font_size
+	label.pixel_size = pixel_size
 	label.modulate = color
-	label.outline_size = 8
+	label.outline_size = outline_size
 	label.no_depth_test = false
 	parent.add_child(label)
 	return label

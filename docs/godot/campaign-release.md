@@ -44,3 +44,14 @@ The Control Room alarm console comparison uses the same camera position and scen
 ![Journal](campaign-screenshots/journal.png)
 
 ![Campaign summary](campaign-screenshots/summary.png)
+
+## Control Room console cleanup
+
+Matched Compatibility-renderer captures show the alarm console before and after the visual cleanup at a normal 3 m approach and the 1.6 m interaction boundary. Each distance is shown with the alarm active and after silencing it. The HUD retains the `E · USE PANEL` prompt inside interaction range.
+
+| View | Before | After |
+| --- | --- | --- |
+| Normal approach, alarm active | [Screenshot](campaign-screenshots/console-cleanup-before-approach-active.png) | [Screenshot](campaign-screenshots/console-cleanup-after-approach-active.png) |
+| Interaction range, alarm active | [Screenshot](campaign-screenshots/console-cleanup-before-interaction-active.png) | [Screenshot](campaign-screenshots/console-cleanup-after-interaction-active.png) |
+| Normal approach, silenced | [Screenshot](campaign-screenshots/console-cleanup-before-approach-silenced.png) | [Screenshot](campaign-screenshots/console-cleanup-after-approach-silenced.png) |
+| Interaction range, silenced | [Screenshot](campaign-screenshots/console-cleanup-before-interaction-silenced.png) | [Screenshot](campaign-screenshots/console-cleanup-after-interaction-silenced.png) |

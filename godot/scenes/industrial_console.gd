@@ -14,9 +14,9 @@ func _ready() -> void:
 	var armor := _material(PALETTE.armor, 0.48, 0.72)
 	var edge := _material(PALETTE.edge, 0.52, 0.65)
 	var shadow := _material(PALETTE.shadow, 0.76, 0.3)
-	var glass := _material(PALETTE.display, 0.3, 0.18, PALETTE.phosphor, 0.48)
-	var key_amber := _material(PALETTE.amber, 0.45, 0.22, PALETTE.amber, 0.28)
-	var key_green := _material(PALETTE.phosphor, 0.38, 0.16, PALETTE.phosphor, 0.4)
+	var glass := _material(PALETTE.display, 0.3, 0.18, PALETTE.phosphor, 0.08)
+	var key_amber := _material(PALETTE.amber, 0.45, 0.22, PALETTE.amber, 0.08)
+	var key_green := _material(PALETTE.phosphor, 0.38, 0.16, PALETTE.phosphor, 0.08)
 	# Heavy pedestal and overhanging console body form a clear, waist-high silhouette.
 	_box("Foot", Vector3(0, 0.08, 0), Vector3(0.76, 0.16, 0.62), shadow)
 	_box("Plinth", Vector3(0.02, 0.48, 0), Vector3(0.48, 0.76, 0.46), armor)
@@ -24,20 +24,25 @@ func _ready() -> void:
 	_box("ConsoleHousing", Vector3(0, 0.94, 0), Vector3(0.82, 0.38, 0.72), armor)
 	_box("LowerLip", Vector3(-0.425, 1.02, 0), Vector3(0.045, 0.13, 0.68), edge)
 	# Angled, recessed screen faces toward -X, the approach side of the existing station.
-	var bezel := _box("DisplayBezel", Vector3(-0.43, 1.34, 0), Vector3(0.06, 0.50, 0.68), shadow)
+	var bezel := _box("DisplayBezel", Vector3(-0.43, 1.34, 0), Vector3(0.06, 0.50, 0.68), shadow, self, false)
 	bezel.rotation.z = 0.12
-	var inset := _box("RecessedDisplay", Vector3(-0.49, 1.35, 0), Vector3(0.025, 0.34, 0.50), glass)
+	var inset := _box("RecessedDisplay", Vector3(-0.49, 1.35, 0), Vector3(0.025, 0.34, 0.50), glass, self, false)
 	inset.rotation.z = 0.12
 	for side in [-1, 1]:
-		var rail := _box("BezelSide_%d" % side, Vector3(-0.52, 1.34, side * 0.29), Vector3(0.045, 0.46, 0.08), edge)
+		var rail := _box("BezelSide_%d" % side, Vector3(-0.52, 1.34, side * 0.29), Vector3(0.045, 0.46, 0.08), edge, self, false)
 		rail.rotation.z = 0.12
 	for level in [-1, 1]:
-		var rail := _box("BezelRail_%d" % level, Vector3(-0.52, 1.34 + level * 0.23, 0), Vector3(0.045, 0.08, 0.66), edge)
+		var rail := _box("BezelRail_%d" % level, Vector3(-0.52, 1.34 + level * 0.23, 0), Vector3(0.045, 0.08, 0.66), edge, self, false)
 		rail.rotation.z = 0.12
-	# Two status bars and a restrained readout pattern are geometry, not external textures.
-	_box("ReadoutMain", Vector3(-0.509, 1.39, 0), Vector3(0.009, 0.025, 0.30), key_green)
-	_box("ReadoutSub", Vector3(-0.509, 1.32, -0.06), Vector3(0.009, 0.016, 0.18), key_amber)
-	_box("ReadoutSub2", Vector3(-0.509, 1.32, 0.16), Vector3(0.009, 0.016, 0.08), key_green)
+	# Keep display markings parallel to the tilted glass and offset them forward to avoid z-fighting.
+	var readout := Node3D.new()
+	readout.name = "DisplayReadout"
+	readout.position = Vector3(-0.49, 1.35, 0)
+	readout.rotation.z = 0.12
+	add_child(readout)
+	_box("ReadoutMain", Vector3(-0.028, 0.04, 0), Vector3(0.009, 0.025, 0.30), key_green, readout, false)
+	_box("ReadoutSub", Vector3(-0.028, -0.03, -0.06), Vector3(0.009, 0.016, 0.18), key_amber, readout, false)
+	_box("ReadoutSub2", Vector3(-0.028, -0.03, 0.16), Vector3(0.009, 0.016, 0.08), key_green, readout, false)
 	# Guarded physical keys and rotary controls on the front lip.
 	for i in 4:
 		var key := _cylinder("Key_%d" % i, Vector3(-0.455, 1.02, -0.24 + i * 0.16), 0.045, 0.035, key_amber if i == 0 else key_green)
@@ -64,7 +69,7 @@ func _material(color: Color, roughness: float, metallic: float, emission: Color 
 		material.emission_energy_multiplier = energy
 	return material
 
-func _box(node_name: String, center: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
+func _box(node_name: String, center: Vector3, size: Vector3, material: Material, parent: Node3D = null, casts_shadow: bool = true) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
 	mesh.name = node_name
 	var shape := BoxMesh.new()
@@ -72,7 +77,9 @@ func _box(node_name: String, center: Vector3, size: Vector3, material: Material)
 	mesh.mesh = shape
 	mesh.material_override = material
 	mesh.position = center
-	add_child(mesh)
+	if not casts_shadow:
+		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	(parent if parent else self).add_child(mesh)
 	return mesh
 
 func _cylinder(node_name: String, center: Vector3, radius: float, height: float, material: Material) -> MeshInstance3D:
