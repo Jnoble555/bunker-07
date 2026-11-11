@@ -30,15 +30,16 @@ func setup(owner_controller: Node) -> void:
 	camera.current = true
 	add_child(camera)
 	weapon = preload("res://scenes/security_sidearm.tscn").instantiate()
-	camera.add_child(weapon)
-	weapon.position = Vector3(0.18, -0.16, -0.43)
+	_make_weapon_view(weapon)
+	weapon.scale = Vector3.ONE * 0.65
+	weapon.position = Vector3(0.14, -0.07, -0.65)
 	muzzle = _add_weapon_box(Vector3(0.10, 0.10, 0.06), Vector3(0, 0.055, -0.20), Color("ffce72"))
 	var glow := StandardMaterial3D.new()
 	glow.albedo_color = Color("ffe0a0")
 	glow.emission_enabled = true
 	glow.emission = Color("ffc564")
 	glow.emission_energy_multiplier = 3.0
-	glow.no_depth_test = true
+	glow.no_depth_test = false
 	glow.render_priority = 100
 	muzzle.material_override = glow
 	muzzle_light = OmniLight3D.new()
@@ -59,7 +60,7 @@ func _add_weapon_box(size: Vector3, at: Vector3, color: Color) -> MeshInstance3D
 	material.albedo_color = color
 	material.roughness = 0.65
 	# Viewmodel overlays the world like the reference weapon; it is never a collider.
-	material.no_depth_test = true
+	material.no_depth_test = false
 	material.render_priority = 100
 	instance.material_override = material
 	instance.position = at
@@ -72,7 +73,7 @@ func reset_player() -> void:
 	rotation = Vector3(0, -PI / 2, 0)
 	velocity = Vector3.ZERO
 	if weapon:
-		weapon.position = Vector3(0.18, -0.16, -0.43)
+		weapon.position = Vector3(0.14, -0.07, -0.65)
 		muzzle.visible = false
 		muzzle_light.light_energy = 0
 		weapon.pose(0, 0)
@@ -93,13 +94,52 @@ func _physics_process(delta: float) -> void:
 	var direction := global_basis * Vector3(input.x, 0, input.y)
 	velocity = direction * SPEED
 	move_and_slide()
-	# A .8s reload lowers then restores the weapon; pause freezes this pose.
+	# Raise the sidearm during the existing .8s reload so the magazine stays visible.
 	var reload_offset: float = 0.0
 	if controller.reload_remaining > 0:
 		var progress: float = 1.0 - controller.reload_remaining / 0.8
-		reload_offset = (progress / 0.25 if progress < 0.25 else (1.0 - progress) / 0.75) * 0.24
+		reload_offset = (progress / 0.25 if progress < 0.25 else (1.0 - progress) / 0.75) * -0.07
 	var sway: float = sin(controller.elapsed * 10) * 0.012 if input.length() > 0 else 0.0
-	weapon.position = Vector3(0.18 + sway, -0.16 - reload_offset, -0.43 + controller.flash * 0.8)
+	weapon.position = Vector3(0.14 + sway, -0.07 - reload_offset, -0.65 + controller.flash * 0.8)
 	weapon.pose(controller.flash, controller.reload_remaining)
 	muzzle.visible = controller.flash > 0
 	muzzle_light.light_energy = 1.3 if controller.flash > 0 else 0.0
+
+func _make_weapon_view(model: Node3D) -> void:
+	# Separate depth buffer prevents world-wall clipping without breaking self-occlusion.
+	var viewport := SubViewport.new()
+	viewport.name = "WeaponViewport"
+	viewport.size = Vector2i(1280, 720)
+	viewport.transparent_bg = true
+	viewport.own_world_3d = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(viewport)
+	var view_camera := Camera3D.new()
+	view_camera.fov = camera.fov
+	view_camera.keep_aspect = camera.keep_aspect
+	view_camera.near = 0.02
+	viewport.add_child(view_camera)
+	view_camera.current = true
+	view_camera.add_child(model)
+	var environment := WorldEnvironment.new()
+	var lighting := Environment.new()
+	lighting.background_mode = Environment.BG_CLEAR_COLOR
+	lighting.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	lighting.ambient_light_color = Color("c0c7c2")
+	lighting.ambient_light_energy = 0.65
+	environment.environment = lighting
+	viewport.add_child(environment)
+	var key := DirectionalLight3D.new()
+	key.rotation_degrees = Vector3(-35, -35, 0)
+	key.light_energy = 0.85
+	viewport.add_child(key)
+	var overlay := CanvasLayer.new()
+	overlay.layer = 0
+	add_child(overlay)
+	var image := TextureRect.new()
+	image.texture = viewport.get_texture()
+	image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_SCALE
+	overlay.add_child(image)
