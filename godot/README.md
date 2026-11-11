@@ -45,7 +45,7 @@ Results show active time, accuracy, rank and retries; the final summary lists al
 - `scripts/campaign_state.gd`: successful commits, ranks, journal, preferences and CSV.
 - `scripts/encounter_systems.gd`: camera, devices, optional rewards and investigation state.
 - `scripts/armored_guard.gd`: scout/armored/turret roles, windup/stagger and investigation navigation.
-- `scripts/room.gd`, `player.gd`, `native_audio.gd`: original 3D world, player/weapon and finite synthesized spatial sounds.
+- `scripts/room.gd`, `player.gd`, `native_audio.gd`: original 3D world, player/weapon and finite synthesized spatial sounds. `scenes/industrial_console.tscn` and its script provide the visual-only Control Room alarm console; its procedural mesh and material source is original project code, with no external assets or license dependencies.
 
 One browser tile is two meters: `(x,y)` becomes native `(2x,0,2y)`. Physics bits are world 1, player 2, enemy 4 and shootable devices 8. All assets are original procedural geometry/materials/audio, with Godot's built-in font.
 

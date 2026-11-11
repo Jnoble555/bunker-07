@@ -2,6 +2,8 @@ extends Node3D
 ## Original primitive geometry for all three campaign missions.
 ## One reference tile is two meters. Only walls/floor/ceiling and the core gate collide.
 
+const IndustrialConsoleScene = preload("res://scenes/industrial_console.tscn")
+
 const MAP: Array[String] = [
 	"#############",
 	"##########..#",
@@ -38,6 +40,7 @@ var _panel_disabled: bool = false
 var _gate: Node3D
 var _gate_shapes: Array[CollisionShape3D] = []
 var _panel_screen: MeshInstance3D
+var _panel_on_material: StandardMaterial3D
 var _panel_light: OmniLight3D
 var _core_light: OmniLight3D
 var _materials: Dictionary = {}
@@ -57,6 +60,7 @@ func build(config: Dictionary = {}) -> void:
 	_core_position = core_value if core_value is Vector3 else Vector3(17, 0, 11)
 	_exit_position = exit_value if exit_value is Vector3 else Vector3(23, 0, 3)
 	_make_materials()
+	_panel_on_material = _materials["cyan"]
 	_make_environment()
 	var width: float = map_rows[0].length() * 2.0
 	var depth: float = map_rows.size() * 2.0
@@ -100,7 +104,7 @@ func set_gate(closed: bool) -> void:
 func set_panel_disabled(value: bool) -> void:
 	_panel_disabled = value
 	if is_instance_valid(_panel_screen):
-		_panel_screen.material_override = _materials["off"] if value else _materials["cyan"]
+		_panel_screen.material_override = _materials["off"] if value else _panel_on_material
 	if is_instance_valid(_panel_light):
 		_panel_light.light_energy = 0.12 if value else 0.75
 
@@ -241,11 +245,19 @@ func _make_panel() -> void:
 	panel.name = "AlarmPanel"
 	panel.position = _panel_position
 	add_child(panel)
-	_mesh_box(panel, "Stand", Vector3(0, 0.54, 0), Vector3(0.62, 1.08, 0.4), _materials["steel"])
-	_mesh_box(panel, "Bezel", Vector3(0, 1.22, 0), Vector3(0.75, 0.52, 0.28), _materials["dark"])
-	_panel_screen = _mesh_box(panel, "Screen", Vector3(-0.383, 1.23, 0), Vector3(0.014, 0.3, 0.2), _materials["cyan"])
-	for i in 3:
-		_mesh_box(panel, "Key", Vector3(-0.326, 0.87, -0.1 + i * 0.1), Vector3(0.022, 0.07, 0.055), _materials["hazard"])
+	if mission_id == "control-room":
+		var console := IndustrialConsoleScene.instantiate()
+		console.name = "ConsoleVisual"
+		panel.add_child(console)
+		_panel_screen = console.get_node("RecessedDisplay") as MeshInstance3D
+		_panel_on_material = _emissive(Color("70d6bf"), 0.55)
+		_panel_screen.material_override = _panel_on_material
+	else:
+		_mesh_box(panel, "Stand", Vector3(0, 0.54, 0), Vector3(0.62, 1.08, 0.4), _materials["steel"])
+		_mesh_box(panel, "Bezel", Vector3(0, 1.22, 0), Vector3(0.75, 0.52, 0.28), _materials["dark"])
+		_panel_screen = _mesh_box(panel, "Screen", Vector3(-0.383, 1.23, 0), Vector3(0.014, 0.3, 0.2), _materials["cyan"])
+		for i in 3:
+			_mesh_box(panel, "Key", Vector3(-0.326, 0.87, -0.1 + i * 0.1), Vector3(0.022, 0.07, 0.055), _materials["hazard"])
 	_panel_light = _light(_panel_position + Vector3(-0.6, 1.85, 0), Color("62dac5"), 0.75, 4.5)
 	_label("E / BACKUP POWER" if mission_id == "blackout" else "E / ALARM PANEL", _panel_position + Vector3(0, 1.9, 0), Vector3.ZERO, Color("8ed5c8"))
 

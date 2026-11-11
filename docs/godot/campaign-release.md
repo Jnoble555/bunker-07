@@ -1,6 +1,6 @@
 # Native campaign release candidate
 
-Branch: `migration/godot-campaign`, based on `af85238`. The completed implementation remains on this feature branch for review/playtest approval; main and the hosted browser game are unchanged.
+The native campaign was merged to `main` and pushed to `origin/main` in commit `f72c9b5` (based on `af85238`). This document records the validation for that merged release candidate; the hosted browser game remains unchanged.
 
 The native game includes Breach, Control Room and Blackout, their reference maps/objectives, all three enemy roles, reactive security and devices, optional rewards, successful-extraction-only consequences, retries/ranks/journal, menus/settings/onboarding, summaries and CSV. [Parity and limits](parity.md) and [launch instructions](../../godot/README.md) are current. Earlier checkpoint/M1 reports remain historical evidence.
 
@@ -28,6 +28,12 @@ Related engine reports describe the same category of exit-while-playing warnings
 All 3D meshes, textures, effects and synthesized audio are original project source; no external art or recordings were downloaded. Godot's built-in font is used.
 
 ## Visual evidence
+
+The Control Room alarm console comparison uses the same camera position and scene state:
+
+![Before: original simple console](campaign-screenshots/control-console-before.png)
+
+![After: original industrial console](campaign-screenshots/control-console-after.png)
 
 ![Breach](campaign-screenshots/breach.png)
 
