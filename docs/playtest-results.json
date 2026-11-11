@@ -1,0 +1,170 @@
+{
+  "checks": [
+    {
+      "name": "core gate closed",
+      "ok": true
+    },
+    {
+      "name": "maintenance route",
+      "ok": true
+    },
+    {
+      "name": "panel prevents alarm",
+      "ok": true
+    },
+    {
+      "name": "core collected opens gate",
+      "ok": true
+    },
+    {
+      "name": "stealth extraction",
+      "ok": true
+    },
+    {
+      "name": "direct route",
+      "ok": true
+    },
+    {
+      "name": "broken sight resets detection",
+      "ok": true
+    },
+    {
+      "name": "alarm reinforcement once",
+      "ok": true
+    },
+    {
+      "name": "no duplicate reinforcement",
+      "ok": true
+    },
+    {
+      "name": "silence preserves reinforcement",
+      "ok": true
+    },
+    {
+      "name": "bot hit and killed",
+      "ok": true
+    },
+    {
+      "name": "attack windup",
+      "ok": true
+    },
+    {
+      "name": "attack damage",
+      "ok": true
+    },
+    {
+      "name": "mission renders breach",
+      "ok": true
+    },
+    {
+      "name": "mission renders control-room",
+      "ok": true
+    },
+    {
+      "name": "mission renders blackout",
+      "ok": true
+    },
+    {
+      "name": "maintenance collision traversal and extraction",
+      "ok": true
+    },
+    {
+      "name": "direct collision traversal and alarm extraction",
+      "ok": true
+    },
+    {
+      "name": "keyboard reload completes",
+      "ok": true
+    },
+    {
+      "name": "pause UI",
+      "ok": true
+    },
+    {
+      "name": "campaign briefing UI",
+      "ok": true
+    },
+    {
+      "name": "pause hides tutorial",
+      "ok": true
+    },
+    {
+      "name": "pause settings UI",
+      "ok": true
+    },
+    {
+      "name": "resume restores HUD controls tutorial",
+      "ok": true
+    },
+    {
+      "name": "reload blocks firing",
+      "ok": true
+    },
+    {
+      "name": "tutorial completion persisted",
+      "ok": true
+    },
+    {
+      "name": "retry resets mission and counts attempt",
+      "ok": true
+    },
+    {
+      "name": "continue opens next briefing",
+      "ok": true
+    },
+    {
+      "name": "control room starts clean",
+      "ok": true
+    },
+    {
+      "name": "blackout exit locked before power",
+      "ok": true
+    },
+    {
+      "name": "blackout cannot exit unpowered",
+      "ok": true
+    },
+    {
+      "name": "blackout power use",
+      "ok": true
+    },
+    {
+      "name": "campaign summary after final exit",
+      "ok": true
+    },
+    {
+      "name": "new campaign preserves session events",
+      "ok": true
+    },
+    {
+      "name": "escaping windup avoids damage",
+      "ok": true
+    },
+    {
+      "name": "CSV quotes special fields",
+      "ok": true
+    },
+    {
+      "name": "settings survive reload",
+      "ok": true
+    },
+    {
+      "name": "settings reset defaults",
+      "ok": true
+    },
+    {
+      "name": "CSV download includes mission and combat",
+      "ok": true
+    },
+    {
+      "name": "storage and audio unavailable remain playable",
+      "ok": true
+    },
+    {
+      "name": "late pointer capture released on menu",
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "averageRenderMs": 7.97666666607062
+}

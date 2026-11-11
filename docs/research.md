@@ -1,0 +1,26 @@
+# Control Room research notes
+
+Sources read directly on 2026-11-11. These are paraphrased design notes, not imported tutorial code or artwork. The integration report should distinguish implemented items below from recommendations.
+
+## Lode's raycasting tutorials
+
+- [Raycasting — Textured Raycaster](https://lodev.org/cgtutor/raycasting.html): use the fractional wall intersection to select a texture column, then step vertically through texture rows. Keep perpendicular camera depth for projection; Euclidean distance produces fisheye distortion. Shade differently oriented wall faces to clarify corners. **Application:** replace the repeated flat green wall bands with original concrete, panel and hazard materials sampled at the wall hit. Existing `ray()` already returns `edge`, `side` and perpendicular `dist`, so this is a renderer extension rather than a new geometry system.
+- [Raycasting II — Floor and Ceiling](https://lodev.org/cgtutor/raycasting2.html): horizontal scanlines interpolate world coordinates between the left and right camera rays. Render these surfaces before walls. Affine interpolation is valid for horizontal planes. **Application:** anchor floor seams/grating and ceiling service panels in world space, using row distance rather than screen-space stripes. Skip the horizon division by zero and use restrained distance fading to reduce distant texture shimmer.
+- [Raycasting III — Sprites](https://lodev.org/cgtutor/raycasting3.html): project billboard sprites in camera space, sort far to near, preserve transparent pixels, and compare every sprite stripe with the corresponding wall depth. **Application:** draw original consoles, fixtures and animated bots through one occlusion-aware sprite path. The original sign path tests only its center, so a sign spanning a corner can bleed over a nearer wall; per-column clipping fixes that. Billboard props cannot provide solid three-dimensional cover unless collision and line-of-sight geometry also change.
+
+The downloadable Wolfenstein textures on Lode's pages are explicitly identified there as copyrighted by id Software. Do not copy those assets. Learn the mapping techniques and create original artwork.
+
+## The Level Design Book
+
+- [Encounter — Combat story and Footholds](https://book.leveldesignbook.com/process/combat/encounter): an encounter should support several tactics and communicate a beginning, middle and end. A preparatory foothold lets players inspect threats and plan a retreat; a limited enemy palette keeps that plan readable. **Application:** preserve the direct combat route and maintenance bypass, make their entrances visually distinct, and provide a sheltered initial decision space. Keep the guard, detection warning, alarm reinforcement, panel disable, core pickup and extraction as readable successive beats. Props should reveal the room's function without blocking those routes. Improve the bot's anticipation pose alongside the existing attack timer, so the movement response is legible before damage.
+- [Lighting — Fixture vs light source; How to light a level](https://book.leveldesignbook.com/process/lighting): light should organize space and communicate useful information. Associate illumination with plausible visible fixtures. Establish ambient light first, then critical-path lighting, encounter lighting and finally mood detail. **Application:** use neutral industrial fill, warm guard/direct-route fixtures, cool panel/maintenance accents, and a clearly differentiated extraction beacon. Preserve enough fill to read enemy silhouettes and route edges. Let alarm state change visible warning fixtures and nearby color. In this Canvas raycaster, analytic world-position falloff plus emissive fixture pixels can suggest local light; it does not imply shadow maps, physically based reflections or global illumination.
+
+## Baseline diagnosis and implementation constraints
+
+Inspection of the original `index.html` renderer found one flat ceiling color, a screen-space floor gradient, near-identical wall strips, rectangular enemies with no locomotion, sparse floating signs, a small block-shaped weapon and an ungrouped text HUD. These omit material scale, environmental function, local lighting hierarchy and movement feedback.
+
+The renderer is Canvas 2D at 480×270, with equal-height opaque grid walls and a one-dimensional wall depth buffer. It supports camera-facing sprites, not arbitrary meshes, elevation changes or true volumetric effects. Keep floor and ceiling planar; use surface texture detail instead of modeled pipes or recesses. Use transparent original sprite artwork for props and pose animation. Keep decorative props nonblocking unless deliberately supported by gameplay geometry. Any glow must be clipped with the fixture rather than painted through walls. Preserve warning text and interaction prompts above decorative rendering.
+
+## Evidence to collect during integration
+
+Capture identical camera positions before/after; inspect corners for sprite/sign clipping; walk both routes; test alarm trigger, interrupted detection, panel use before/after alarm, reinforcement count, core gating and extraction; verify attacks, reload/fire feedback, HUD warnings, pause/resume and other missions. Record actual results separately; this research note does not claim those checks have passed.
