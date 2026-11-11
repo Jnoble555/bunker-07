@@ -17,6 +17,10 @@ func frames(count: int) -> void:
 func fresh() -> void:
 	game.set_paused(false)
 	game.retry_run()
+	# Isolate the original M1 guard mechanics from newly ported shootable devices.
+	# Device occlusion and hits are tested separately in campaign_test.gd.
+	game.systems.shootable_hit("camera")
+	game.systems.shootable_hit("lamp")
 	await frames(3)
 
 func shoot_once() -> void:
@@ -259,7 +263,7 @@ func run() -> void:
 	for target: Vector3 in [Vector3(17, 0, 15), Vector3(17, 0, 11), Vector3(17, 0, 9), Vector3(21, 0, 9), Vector3(21, 0, 3), Vector3(23, 0, 3)]:
 		walked = (await walk_to(target)) and walked
 	check("complete maintenance route crosses opened gate and extracts", walked and game.core_collected and not game.active and game.health == 100 and game.menu_state == "result")
-	check("successful result remains explicitly partial", game.menu_text.text.contains("PARTIAL PORT") and game.menu_text.text.contains("No campaign decisions"))
+	check("successful result exposes campaign rank and continuation", game.menu_state == "result" and game.menu_text.text.contains("RANK") and game.continue_button.visible)
 	await fresh()
 	check("retry after extraction restores closed gate", not game.core_collected and not game.has_los(Vector3(17, 1.4, 11), Vector3(17, 1.4, 8.5)))
 

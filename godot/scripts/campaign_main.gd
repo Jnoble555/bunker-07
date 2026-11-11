@@ -1,0 +1,569 @@
+extends "res://scripts/main.gd"
+## Campaign session built on the independently tested M1 movement/UI shell.
+const MissionData = preload("res://scripts/mission_data.gd")
+const CampaignState = preload("res://scripts/campaign_state.gd")
+const EncounterSystems = preload("res://scripts/encounter_systems.gd")
+const NativeAudio = preload("res://scripts/native_audio.gd")
+var session = CampaignState.new()
+var systems: RefCounted
+var audio: RefCounted
+var missions: Array[Dictionary] = MissionData.all_missions()
+var mission_index: int = 1
+var mission: Dictionary = {}
+var enemies: Array = []
+var power_restored: bool = false
+var reinforcement_spawned: bool = false
+var first_route: String = ""
+var last_result: Dictionary = {}
+var last_won: bool = false
+var message: String = ""
+var message_left: float = 0
+var damage_direction: String = ""
+var tutorial_index: int = 0
+var tutorial_active: bool = false
+var tutorial_text: Label
+var tutorial_steps: Array[String] = ["Move with WASD / Up, Down","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
+var campaign_button: Button
+var continue_button: Button
+var settings_button: Button
+var journal_button: Button
+var controls_button: Button
+var export_button: Button
+var back_button: Button
+var confirm_button: Button
+var settings_box: VBoxContainer
+var volume_slider: HSlider
+var sensitivity_slider: HSlider
+var mute_check: CheckBox
+var return_state: String = "title"
+
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_install_inputs()
+	player = PlayerScript.new()
+	player.name = "Player"
+	add_child(player)
+	player.setup(self)
+	systems = EncounterSystems.new()
+	systems.setup(self)
+	audio = NativeAudio.new()
+	audio.setup(self)
+	_load_mission()
+	super._build_ui()
+	_build_campaign_ui()
+	show_title()
+
+func _load_mission() -> void:
+	mission = missions[mission_index].duplicate(true)
+	for enemy in enemies:
+		if is_instance_valid(enemy): enemy.free()
+	enemies.clear()
+	guard = null
+	if is_instance_valid(room): room.free()
+	room = RoomScript.new()
+	room.name = "World"
+	room.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(room)
+	room.build(mission)
+	for spec: Dictionary in mission.bots:
+		var initial: Dictionary = spec.duplicate(true)
+		if mission.id=="blackout" and session.decisions.security_disabled: initial.hp = 0
+		spawn_enemy(initial)
+	if mission.id=="blackout" and session.decisions.alarm_raised and not session.decisions.security_disabled:
+		spawn_enemy({"id":"pursuit-armor","position":Vector3(15,0,9),"role":"armored","hp":3,"is_guard":false})
+
+func spawn_enemy(spec: Dictionary) -> CharacterBody3D:
+	var enemy = GuardScript.new()
+	add_child(enemy)
+	enemy.setup(self,spec.position,spec)
+	enemies.append(enemy)
+	if spec.get("is_guard",false) or guard==null: guard = enemy
+	return enemy
+
+func _install_inputs() -> void:
+	super._install_inputs()
+	if not InputMap.has_action("journal"):
+		InputMap.add_action("journal")
+		var event := InputEventKey.new()
+		event.physical_keycode = KEY_J
+		InputMap.action_add_event("journal",event)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.echo: return
+	if event.is_action_pressed("pause") and active:
+		if menu_state in ["settings","journal","confirm"]: _back_to_pause()
+		else: set_paused(not get_tree().paused)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("journal") and active:
+		open_journal()
+		return
+	if event.is_action_pressed("retry") and menu_state not in ["title","briefing","settings"]:
+		retry_run()
+		return
+	if not active or get_tree().paused: return
+	for action in ["fire","reload","interact"]:
+		if event.is_action_pressed(action):
+			if action=="fire": Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			request_action(action)
+			get_viewport().set_input_as_handled()
+
+func new_campaign() -> void:
+	session.new_campaign()
+	mission_index = 0
+	show_briefing()
+
+func show_briefing() -> void:
+	active = false
+	get_tree().paused = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var definition: Dictionary = missions[mission_index]
+	_show_menu("briefing",definition.title,"MISSION %d OF 3\n\n%s" % [mission_index+1,definition.briefing])
+
+func deploy_current() -> void:
+	start_run()
+
+func advance_campaign() -> void:
+	if not last_won: return
+	if mission_index<2:
+		mission_index += 1
+		show_briefing()
+	else: new_campaign()
+
+func start_run() -> void:
+	active = false
+	if audio: audio.stop_all()
+	get_tree().paused = false
+	pending_actions.clear()
+	ammo = 8
+	health = 100
+	cooldown = 0
+	reload_remaining = 0
+	flash = 0
+	hit_feedback = 0
+	hurt_feedback = 0
+	elapsed = 0
+	shots = 0
+	hits = 0
+	panel_disabled = false
+	alarm_triggered = false
+	alarm_active = false
+	core_collected = false
+	power_restored = false
+	reinforcement_spawned = false
+	first_route = ""
+	message_left = 0
+	session.begin_attempt()
+	_load_mission()
+	player.reset_player()
+	player.global_position = mission.spawn
+	systems.reset()
+	if mission.id=="breach": session.note("BREACH LOG: Scouts are fast but lightly armored. Break sight around corners.")
+	elif mission.id=="blackout":
+		session.note("BLACKOUT LOG: Backup power is independent of turret security.")
+		if session.decisions.security_disabled: session.note("SECURITY LINK: Control Room shutdown disabled the extraction turret.")
+		elif session.decisions.alarm_raised: session.note("SECURITY LINK: The alarm deployed an armored pursuit unit.")
+		if session.decisions.intel: session.note("RECOVERED INTEL: Find backup power in the southwest bay. Turrets cannot move.")
+	attempts += 1
+	register_event("mission_start","")
+	last_result = {}
+	last_won = false
+	tutorial_index = 0
+	tutorial_active = mission.id=="breach" and not session.tutorial_seen
+	menu_state = "play"
+	active = true
+	menu.hide()
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_update_hud()
+
+func retry_run() -> void:
+	var id: String = missions[mission_index].id
+	session.retries[id] = session.retries.get(id,0)+1
+	start_run()
+
+func show_title() -> void:
+	active = false
+	get_tree().paused = false
+	pending_actions.clear()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_show_menu("title","BUNKER 07","NATIVE THREE-MISSION CAMPAIGN\n\nBreach security, secure Control Room and restore Blackout extraction power.\nThe browser remains the behavioral reference for this port.")
+
+func set_paused(value: bool) -> void:
+	super.set_paused(value)
+	_update_hud()
+
+func _physics_process(delta: float) -> void:
+	if not active or get_tree().paused: return
+	elapsed += delta
+	cooldown = maxf(0,cooldown-delta)
+	flash = maxf(0,flash-delta)
+	hit_feedback = maxf(0,hit_feedback-delta)
+	hurt_feedback = maxf(0,hurt_feedback-delta)
+	message_left = maxf(0,message_left-delta)
+	if reload_remaining>0:
+		reload_remaining = maxf(0,reload_remaining-delta)
+		if reload_remaining==0: ammo = 8
+	if Input.get_vector("strafe_left","strafe_right","move_forward","move_back").length()>0: progress_tutorial("move")
+	if Input.get_axis("turn_right","turn_left")!=0: progress_tutorial("aim")
+	var actions := pending_actions.duplicate()
+	pending_actions.clear()
+	for action in actions:
+		match action:
+			"fire": shoot()
+			"reload": begin_reload()
+			"interact": interact()
+	systems.update(delta)
+	if not active: return
+	if mission.id=="control-room":
+		if first_route=="":
+			var p: Vector3 = player.global_position/2
+			if p.z>=4.7 and p.z<=6.1 and p.x>=1.8 and p.x<8.5: first_route = "direct"
+			elif p.z>=6.8 and p.z<=8.2 and p.x>=3 and p.x<8.5: first_route = "maintenance"
+			if first_route!="": register_event("route_entered",first_route)
+		if not core_collected and (panel_disabled or alarm_triggered) and planar_distance(player.global_position,mission.core)<1.3:
+			core_collected = true
+			room.set_gate(false)
+			room.set_core_collected(true)
+			register_event("core_collected","data_core_1")
+	var unlocked: bool = core_collected if mission.id=="control-room" else power_restored if mission.id=="blackout" else remaining()==0
+	if unlocked and planar_distance(player.global_position,mission.exit)<1.2: finish(true)
+	_update_hud()
+
+func shoot() -> void:
+	if not active or get_tree().paused or ammo==0 or cooldown>0 or reload_remaining>0: return
+	ammo -= 1
+	shots += 1
+	cooldown = .24
+	flash = .10
+	hit_feedback = 0
+	progress_tutorial("fire")
+	play_sound("fire",player.global_position)
+	var origin: Vector3 = player.camera.global_position
+	var direction: Vector3 = -player.camera.global_basis.z
+	var query := PhysicsRayQueryParameters3D.create(origin,origin+direction*50,1|4|8,[player.get_rid()])
+	query.collide_with_areas = true
+	query.hit_from_inside = true
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if not hit.is_empty(): _impact(hit.position)
+	var wall_hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+direction*50,1))
+	var wall_depth: float = origin.distance_to(wall_hit.position) if not wall_hit.is_empty() else 50.0
+	var target_id := ""
+	if not hit.is_empty():
+		var object: Node3D = hit.collider
+		var center: Vector3 = object.get_meta("target_center",object.global_position)
+		if object is Area3D and object.has_method("receive_hit"): center = object.get_parent().global_position
+		var depth: float = (center-origin).dot(direction)
+		if depth>0 and depth<wall_depth:
+			if object.has_meta("device_id"):
+				if systems.shootable_hit(str(object.get_meta("device_id"))): target_id = str(object.get_meta("device_id"))
+			elif object.has_method("receive_hit"):
+				hits += 1
+				hit_feedback = .24
+				object.receive_hit()
+				var actor: Node = object.get_parent() if object is Area3D else object
+				target_id = str(enemies.find(actor)+1)
+		if target_id!="":
+			if object.has_meta("device_id"): hits += 1
+			hit_feedback = .24
+			play_sound("hit",center)
+	systems.on_shot()
+	register_event("shot","",target_id if target_id not in ["camera","lamp"] else "")
+
+func begin_reload() -> void:
+	if active and not get_tree().paused and ammo<8 and reload_remaining==0:
+		reload_remaining = .8
+		progress_tutorial("reload")
+		play_sound("reload",player.global_position)
+		register_event("reload","")
+
+func interact() -> void:
+	if not active or get_tree().paused: return
+	if systems.interact():
+		play_sound("use",player.global_position)
+		return
+	if mission.id=="breach" or panel_disabled or planar_distance(player.global_position,mission.panel)>1.7: return
+	if not has_los(player.camera.global_position,mission.panel+Vector3(0,1.4,0)): return
+	panel_disabled = true
+	room.set_panel_disabled(true)
+	play_sound("use",mission.panel)
+	if mission.id=="control-room":
+		alarm_active = false
+		if is_instance_valid(guard): guard.alert_progress = 0
+		register_event("alarm_disabled","silenced" if alarm_triggered else "prevented")
+	else:
+		power_restored = true
+		room.set_power_restored(true)
+		register_event("power_restored","power_switch_1")
+
+func trigger_alarm() -> void:
+	if not active or mission.id!="control-room" or panel_disabled or alarm_triggered: return
+	alarm_triggered = true
+	alarm_active = true
+	register_event("alarm_triggered","guard_1")
+	play_sound("alarm",player.global_position)
+	if not reinforcement_spawned:
+		reinforcement_spawned = true
+		spawn_enemy({"id":"reinforcement_1","position":Vector3(15,0,15),"role":"scout","hp":2,"is_guard":false})
+		register_event("reinforcement_spawned","reinforcement_1")
+	announce("ALARM ACTIVE / Reinforcement deployed. Break sight or overload the grid.")
+
+func damage_player(amount: int,source: Vector3) -> void:
+	if not active or get_tree().paused: return
+	health = maxi(0,health-amount)
+	hurt_feedback = .22
+	damage_direction = "DAMAGE FROM RIGHT" if (source-player.global_position).dot(player.global_basis.x)>0 else "DAMAGE FROM LEFT"
+	play_sound("damage",source)
+	var attacker := ""
+	for i in enemies.size():
+		if enemies[i].global_position.distance_to(source)<.01:
+			attacker = str(i+1)
+			break
+	register_event("damage",str(amount),attacker)
+	if health==0: finish(false)
+
+func remaining() -> int:
+	var count := 0
+	for enemy in enemies:
+		if is_instance_valid(enemy) and enemy.hp>0: count += 1
+	return count
+
+func finish(won: bool) -> void:
+	if not active: return
+	register_event("mission_clear" if won else "mission_failed","failure" if not won else "alarm" if mission.id=="control-room" and alarm_triggered else "stealth" if mission.id=="control-room" else "clear")
+	last_won = won
+	last_result = session.commit(mission,_snapshot(),won)
+	active = false
+	pending_actions.clear()
+	reload_remaining = 0
+	for enemy in enemies: enemy.attack_windup = 0
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var accuracy: String = "%d%% (%d/%d)" % [roundi(float(hits)/shots*100),hits,shots] if shots else "No shots"
+	var text: String = "Active time: %.1fs · Accuracy: %s\nRetries: %d\n" % [elapsed,accuracy,session.retries[mission.id]]
+	if won:
+		text += "RANK %s · %s\n" % [last_result.rank.grade,"CLEAN RUN" if last_result.rank.stealth else "COMBAT RUN"]
+		if mission.id=="control-room": text += "Intel: %s · Secret: %s\n" % [systems.intel,systems.secret]
+	if won and mission_index==2:
+		for id in ["breach","control-room","blackout"]:
+			var summary: Dictionary = session.summaries.get(id,{})
+			if not summary.is_empty(): text += "\n%s / %.1fs / Rank %s / %d retries" % [id.to_upper(),summary.time,summary.rank.grade,summary.retries]
+	_show_menu("summary" if won and mission_index==2 else "result","CAMPAIGN COMPLETE" if won and mission_index==2 else mission.title+" CLEAR" if won else "MISSION FAILED",text)
+
+func _snapshot() -> Dictionary:
+	return {"panel_disabled":panel_disabled,"alarm_triggered":alarm_triggered,"intel":systems.intel,"secret":systems.secret,"elapsed":elapsed,"shots":shots,"hits":hits,"health":health}
+
+func register_event(event: String,detail: String="",bot_id: String="") -> void:
+	# Preserve the browser's target/detail columns, including module adapters.
+	if bot_id=="" and event=="alarm_disabled": bot_id = "alarm_panel_1"
+	elif bot_id=="" and event in ["alarm_triggered","reinforcement_spawned","core_collected","power_restored","camera_detected","camera_destroyed","light_destroyed","grid_overloaded","intel_recovered","bulkhead_obstructed","bulkhead_toggled","secret_found","guard_investigating","power_rerouted","bot_disabled","attack_windup"]:
+		var split: int = detail.find("|")
+		bot_id = detail.substr(0,split) if split>=0 else detail
+		detail = detail.substr(split+1) if split>=0 else ""
+		if event in ["bot_disabled","attack_windup"]:
+			for i in enemies.size():
+				if enemies[i].id==bot_id:
+					bot_id = str(i+1)
+					break
+	events.append({"run":attempts,"elapsed_seconds":"%.2f" % elapsed,"event":event,"bot_id":bot_id,"health":health,"ammo":ammo,"shots":shots,"hits":hits,"detail":detail,"mission_id":mission.get("id","")})
+
+func export_csv(path: String="") -> String:
+	var destination: String = "user://bunker-07-session.csv" if path=="" else path
+	var file := FileAccess.open(destination,FileAccess.WRITE)
+	if file==null:
+		announce("CSV export failed: "+error_string(FileAccess.get_open_error()))
+		return ""
+	file.store_string(session.csv_text(events))
+	file.close()
+	var absolute := ProjectSettings.globalize_path(destination)
+	announce("CSV exported: "+absolute)
+	if menu_text and menu.visible: menu_text.text += "\n\nCSV saved: "+absolute
+	return absolute
+
+func announce(text: String) -> void:
+	message = text
+	message_left = 7
+
+func play_sound(kind: String,at: Vector3) -> void:
+	if audio: audio.play(kind,at)
+
+func _impact(at: Vector3) -> void:
+	if get_tree().get_nodes_in_group("impact_sparks").size()>=24: return
+	var spark := MeshInstance3D.new()
+	spark.process_mode = Node.PROCESS_MODE_PAUSABLE
+	var mesh := SphereMesh.new()
+	mesh.radius = .055
+	mesh.height = .11
+	spark.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color("ffc175")
+	spark.material_override = material
+	add_child(spark)
+	spark.add_to_group("impact_sparks")
+	spark.global_position = at
+	var tween := spark.create_tween()
+	tween.tween_property(spark,"scale",Vector3.ONE*.01,.18)
+	tween.tween_callback(spark.queue_free)
+	play_sound("impact",at)
+
+func progress_tutorial(trigger: String) -> void:
+	if not active or not tutorial_active: return
+	if ["move","aim","fire","reload"][tutorial_index]!=trigger: return
+	tutorial_index += 1
+	if tutorial_index>=4:
+		tutorial_active = false
+		session.tutorial_seen = true
+		session.save_preferences()
+
+func open_journal() -> void:
+	if not active: return
+	set_paused(true)
+	_show_menu("journal","FIELD LOG","\n\n".join(session.journal))
+
+func open_settings() -> void:
+	if active and not get_tree().paused: set_paused(true)
+	return_state = menu_state
+	_show_menu("settings","SETTINGS","Preferences are saved locally. Audio is optional.")
+	volume_slider.set_value_no_signal(session.preferences.volume)
+	sensitivity_slider.set_value_no_signal(session.preferences.sensitivity)
+	mute_check.set_pressed_no_signal(session.preferences.muted)
+
+func close_settings() -> void:
+	if return_state=="title": show_title()
+	else: _back_to_pause()
+
+func _back_to_pause() -> void:
+	if active: get_tree().paused = true
+	_show_menu("pause","PAUSED","Timed actions and enemy state are frozen.")
+
+func _confirm_return() -> void:
+	_show_menu("confirm","ABANDON RUN?","Discard this attempt? Session analytics and earlier successful decisions remain until Start Campaign.")
+
+func _abandon() -> void:
+	register_event("mission_abandoned","")
+	show_title()
+
+func _show_controls() -> void:
+	_show_menu("controls","CONTROLS","WASD / Up, Down: move · Mouse / Left, Right: aim\nClick / Space: fire · R: reload · E: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
+
+func _save_settings() -> void:
+	session.preferences.volume = volume_slider.value
+	session.preferences.sensitivity = sensitivity_slider.value
+	session.preferences.muted = mute_check.button_pressed
+	session.save_preferences()
+	if audio: audio.refresh_volume()
+
+func _reset_settings() -> void:
+	session.preferences = CampaignState.DEFAULTS.duplicate()
+	session.save_preferences()
+	volume_slider.set_value_no_signal(session.preferences.volume)
+	sensitivity_slider.set_value_no_signal(session.preferences.sensitivity)
+	mute_check.set_pressed_no_signal(false)
+	if audio: audio.refresh_volume()
+
+func _build_campaign_ui() -> void:
+	var column: VBoxContainer = menu_title.get_parent()
+	deploy_button.text = "Deploy"
+	campaign_button = _button(column,"Start Campaign",new_campaign)
+	continue_button = _button(column,"Continue",advance_campaign)
+	settings_button = _button(column,"Settings",open_settings)
+	journal_button = _button(column,"Field Log [J]",open_journal)
+	controls_button = _button(column,"Controls",_show_controls)
+	export_button = _button(column,"Export session CSV",func(): export_csv())
+	back_button = _button(column,"Back",func():
+		if menu_state=="settings": close_settings()
+		elif menu_state=="controls": show_title()
+		else: _back_to_pause())
+	confirm_button = _button(column,"Confirm return to title",_abandon)
+	settings_box = VBoxContainer.new()
+	column.add_child(settings_box)
+	var label := Label.new()
+	label.text = "Master volume"
+	settings_box.add_child(label)
+	volume_slider = HSlider.new()
+	volume_slider.min_value = 0
+	volume_slider.max_value = 1
+	volume_slider.step = .05
+	settings_box.add_child(volume_slider)
+	label = Label.new()
+	label.text = "Mouse sensitivity"
+	settings_box.add_child(label)
+	sensitivity_slider = HSlider.new()
+	sensitivity_slider.min_value = .0005
+	sensitivity_slider.max_value = .01
+	sensitivity_slider.step = .0005
+	settings_box.add_child(sensitivity_slider)
+	mute_check = CheckBox.new()
+	mute_check.text = "Mute"
+	settings_box.add_child(mute_check)
+	_button(settings_box,"Reset to defaults",_reset_settings)
+	volume_slider.value_changed.connect(func(_value): _save_settings())
+	sensitivity_slider.value_changed.connect(func(_value): _save_settings())
+	mute_check.toggled.connect(func(_value): _save_settings())
+	title_button.pressed.disconnect(show_title)
+	title_button.pressed.connect(_confirm_return)
+	tutorial_text = Label.new()
+	tutorial_text.position = Vector2(24,130)
+	tutorial_text.add_theme_color_override("font_color",Color("e5d7ae"))
+	hud.get_parent().add_child(tutorial_text)
+	# Long journals/results scroll instead of growing outside the viewport.
+	column.remove_child(menu_text)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size.y = 150
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	menu_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(menu_text)
+	column.add_child(scroll)
+	column.move_child(scroll,1)
+
+func _show_menu(state: String,title: String,text: String) -> void:
+	menu_state = state
+	menu_title.text = title
+	menu_text.text = text
+	deploy_button.visible = state=="briefing"
+	resume_button.visible = state=="pause"
+	retry_button.visible = state=="pause" or (state=="result" and not last_won)
+	title_button.visible = state=="pause"
+	campaign_button.visible = state=="title"
+	continue_button.visible = (state=="result" and last_won) or state=="summary"
+	continue_button.text = "Start New Campaign" if state=="summary" else "Continue"
+	settings_button.visible = state in ["title","pause"]
+	journal_button.visible = state=="pause"
+	controls_button.visible = state=="title"
+	export_button.visible = state in ["result","summary","pause"] and not events.is_empty()
+	back_button.visible = state in ["settings","journal","confirm","controls"]
+	confirm_button.visible = state=="confirm"
+	settings_box.visible = state=="settings"
+	menu.show()
+	_update_hud()
+
+func _update_hud() -> void:
+	if not hud: return
+	hud.text = "BUNKER 07 / %s   |   HEALTH %d   AMMO %d/8   %.0fs" % [mission.get("title",""),health,ammo,elapsed]
+	var objective := ""
+	match mission.get("id",""):
+		"breach": objective = "DISABLE SECURITY SCOUT" if remaining()>0 else "REACH CONTROL SECTOR"
+		"blackout": objective = "POWER RESTORED · REACH LIFT" if power_restored else "FIND BACKUP POWER / SOUTHWEST BAY"
+		_: objective = "CORE SECURED · EXTRACT" if core_collected else "DATA CORE REQUIRED · PANEL OR GUARD ALERT"
+	if mission.get("id","")!="breach" and planar_distance(player.global_position,mission.panel)<=1.7: objective += " | PANEL OFF" if panel_disabled else " | E · USE PANEL"
+	var prompt: String = systems.prompt() if systems else ""
+	if prompt!="": objective += " | "+prompt
+	status.text = objective
+	var warnings: Array[String] = []
+	if alarm_active: warnings.append("ALARM ACTIVE / REINFORCEMENT DEPLOYED")
+	for enemy in enemies:
+		if enemy.alert_progress>0 and not alarm_triggered: warnings.append("GUARD LOCKING · BREAK SIGHT")
+		if enemy.attack_windup>0: warnings.append("BOT ATTACK · MOVE!")
+	if reload_remaining>0: warnings.append("RELOADING %.1fs" % reload_remaining)
+	if ammo==0 and reload_remaining==0: warnings.append("EMPTY · R TO RELOAD")
+	if hurt_feedback>0: warnings.append(damage_direction)
+	feedback.text = " | ".join(warnings)
+	tint.color.a = hurt_feedback*1.4
+	crosshair.text = "×" if hit_feedback>0 else "+"
+	hud.visible = active and not get_tree().paused
+	status.visible = hud.visible
+	feedback.visible = hud.visible
+	crosshair.visible = hud.visible
+	if tutorial_text:
+		tutorial_text.visible = hud.visible
+		tutorial_text.text = tutorial_steps[tutorial_index] if tutorial_active else message if message_left>0 else ""

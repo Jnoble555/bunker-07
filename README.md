@@ -1,6 +1,6 @@
 # Bunker 07
 
-An initial **partial Godot Control Room port** is available in [`godot/`](godot/README.md). It is a separate native milestone; the browser version below remains the complete playable campaign. See the [migration parity checklist](docs/godot/parity.md) and [native verification](docs/godot/verification.md).
+An **in-progress Godot campaign port** is available in [`godot/`](godot/README.md). The browser version below remains the behavioral reference. See the [current campaign checkpoint](docs/godot/campaign-checkpoint.md); the [M1 checklist](docs/godot/parity.md) and [M1 verification](docs/godot/verification.md) describe the earlier Control Room milestone.
 
 ### [▶ Play Bunker 07 in your browser](https://jnoble555.github.io/bunker-07/)
 

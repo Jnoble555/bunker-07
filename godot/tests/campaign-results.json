@@ -1,0 +1,210 @@
+{
+	"checks": [
+		{
+			"name": "campaign begins with Breach briefing",
+			"ok": true
+		},
+		{
+			"name": "Breach uses reference spawn and scout",
+			"ok": true
+		},
+		{
+			"name": "Breach onboarding follows move aim fire reload and persists",
+			"ok": true
+		},
+		{
+			"name": "Breach exit remains locked with living bot",
+			"ok": true
+		},
+		{
+			"name": "bot disable analytics contain current hit count and numeric target",
+			"ok": true
+		},
+		{
+			"name": "Breach collision route clears after scout disabled",
+			"ok": true
+		},
+		{
+			"name": "Continue opens Control Room briefing",
+			"ok": true
+		},
+		{
+			"name": "Control Room starts clean with armored patrol",
+			"ok": true
+		},
+		{
+			"name": "camera visible tracking triggers alarm",
+			"ok": true
+		},
+		{
+			"name": "alarm deploys exactly one scout reinforcement",
+			"ok": true
+		},
+		{
+			"name": "repeated alarm does not duplicate reinforcement",
+			"ok": true
+		},
+		{
+			"name": "camera cannot detect through partition",
+			"ok": true
+		},
+		{
+			"name": "service power isolates camera and dims real lighting",
+			"ok": true
+		},
+		{
+			"name": "isolated camera cannot trigger alarm",
+			"ok": true
+		},
+		{
+			"name": "shooting camera disables it and rewards hit",
+			"ok": true
+		},
+		{
+			"name": "wall blocks device hit",
+			"ok": true
+		},
+		{
+			"name": "service lamp can be destroyed",
+			"ok": true
+		},
+		{
+			"name": "bulkhead closes and blocks LOS",
+			"ok": true
+		},
+		{
+			"name": "bulkhead reopens from switch",
+			"ok": true
+		},
+		{
+			"name": "bulkhead refuses to close on living actor",
+			"ok": true
+		},
+		{
+			"name": "one-use overload staggers visible enemy and cancels windup",
+			"ok": true
+		},
+		{
+			"name": "spent overload cannot apply a second stagger",
+			"ok": true
+		},
+		{
+			"name": "optional intel raises alarm and is provisional",
+			"ok": true
+		},
+		{
+			"name": "failed run does not commit optional intel or alarm",
+			"ok": true
+		},
+		{
+			"name": "retry clears provisional device state and counts retry",
+			"ok": true
+		},
+		{
+			"name": "hidden cache restores 25 health only once",
+			"ok": true
+		},
+		{
+			"name": "disabled panel makes optional intel quiet",
+			"ok": true
+		},
+		{
+			"name": "optional rewards stay provisional before extraction",
+			"ok": true
+		},
+		{
+			"name": "Control Room collision route commits quiet security and optional finds",
+			"ok": true
+		},
+		{
+			"name": "fast accurate optional quiet route earns S rank",
+			"ok": true
+		},
+		{
+			"name": "Continue opens Blackout briefing",
+			"ok": true
+		},
+		{
+			"name": "quiet shutdown disables later turret",
+			"ok": true
+		},
+		{
+			"name": "successful intel journal survives mission transition",
+			"ok": true
+		},
+		{
+			"name": "Blackout extraction requires restored power",
+			"ok": true
+		},
+		{
+			"name": "Blackout power switch restores power",
+			"ok": true
+		},
+		{
+			"name": "Blackout collision route reaches complete campaign summary",
+			"ok": true
+		},
+		{
+			"name": "new campaign clears decisions and keeps session events",
+			"ok": true
+		},
+		{
+			"name": "committed alarm adds armored Blackout pursuer",
+			"ok": true
+		},
+		{
+			"name": "turret role has stationary ranged combat",
+			"ok": true
+		},
+		{
+			"name": "turret attacks at range without moving",
+			"ok": true
+		},
+		{
+			"name": "pause freezes device tracking and active time",
+			"ok": true
+		},
+		{
+			"name": "journal pauses game and shows recovered text",
+			"ok": true
+		},
+		{
+			"name": "in-run settings pause simulation",
+			"ok": true
+		},
+		{
+			"name": "settings return preserves paused encounter",
+			"ok": true
+		},
+		{
+			"name": "native preferences persist and reload",
+			"ok": true
+		},
+		{
+			"name": "settings reset restores native defaults",
+			"ok": true
+		},
+		{
+			"name": "CSV preserves browser schema and mission data",
+			"ok": true
+		},
+		{
+			"name": "CSV quotes commas quotes and newlines",
+			"ok": true
+		},
+		{
+			"name": "device CSV target and detail match browser column semantics",
+			"ok": true
+		},
+		{
+			"name": "panel CSV preserves panel ID and alarm outcome",
+			"ok": true
+		},
+		{
+			"name": "CSV export writes actual session file",
+			"ok": true
+		}
+	],
+	"engine": "4.7.2-stable (official)",
+	"failures": 0
+}

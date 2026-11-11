@@ -1,6 +1,8 @@
-# Bunker 07 — partial Godot port
+# Bunker 07 — Godot campaign preview
 
-**Control Room milestone M1. This is not the full three-mission campaign.** The complete browser reference remains at [the hosted game](https://jnoble555.github.io/bunker-07/) and at `../index.html` locally. No browser game source or tests were replaced.
+**Three-mission campaign implementation is in progress on the migration branch.** Start Campaign now begins Breach, continues through Control Room, and ends with Blackout. See the [current checkpoint and outstanding validation](../docs/godot/campaign-checkpoint.md) before merging. The browser reference remains at [the hosted game](https://jnoble555.github.io/bunker-07/) and at `../index.html` locally. No browser game source or tests were replaced.
+
+Import `project.godot`, press F5, then choose **Start Campaign** and **Deploy**. J opens the journal; settings are available at title and pause. CSV exports to the native user-data folder and displays its saved path. The remaining sections below document the historical M1 launch conventions; feature-availability statements from that milestone are superseded by the current checkpoint.
 
 Tested with **Godot 4.7.2 stable** and GDScript, using the Compatibility renderer. No plugins, downloaded assets or .NET runtime are needed. All native meshes, materials, textures and lighting are original procedural project source; Godot's built-in UI font is used.
 

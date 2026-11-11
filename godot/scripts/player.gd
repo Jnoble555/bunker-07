@@ -85,7 +85,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not controller or not controller.active or get_tree().paused:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * 0.003)
+		rotate_y(-event.relative.x * float(controller.session.preferences.sensitivity))
+		if event.relative.x != 0: controller.progress_tutorial("aim")
 
 func _physics_process(delta: float) -> void:
 	if not controller or not controller.active:

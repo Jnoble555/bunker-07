@@ -177,7 +177,7 @@
 			"ok": true
 		},
 		{
-			"name": "successful result remains explicitly partial",
+			"name": "successful result exposes campaign rank and continuation",
 			"ok": true
 		},
 		{

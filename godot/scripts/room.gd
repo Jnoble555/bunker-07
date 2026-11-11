@@ -1,5 +1,5 @@
 extends Node3D
-## Original primitive geometry for the partial Godot Control Room port.
+## Original primitive geometry for all three campaign missions.
 ## One reference tile is two meters. Only walls/floor/ceiling and the core gate collide.
 
 const MAP: Array[String] = [
@@ -15,6 +15,23 @@ const MAP: Array[String] = [
 	"#############"
 ]
 
+var map_rows: Array[String] = []
+var mission_id: String = "control-room"
+var _config: Dictionary = {}
+var _panel_position := Vector3(9, 0, 15)
+var _core_position := Vector3(17, 0, 11)
+var _exit_position := Vector3(23, 0, 3)
+var _bulkhead: Node3D
+var _bulkhead_shapes: Array[CollisionShape3D] = []
+var _service_enabled: bool = true
+var _lamp_enabled: bool = true
+var _practical_lights: Array[OmniLight3D] = []
+var _camera_screen: MeshInstance3D
+var _service_lamp: MeshInstance3D
+var _service_lamp_light: OmniLight3D
+var _exit_pad: MeshInstance3D
+var _exit_light_meshes: Array[MeshInstance3D] = []
+var _exit_light: OmniLight3D
 var _built: bool = false
 var _gate_closed: bool = true
 var _panel_disabled: bool = false
@@ -25,37 +42,52 @@ var _panel_light: OmniLight3D
 var _core_light: OmniLight3D
 var _materials: Dictionary = {}
 
-func build() -> void:
+func build(config: Dictionary = {}) -> void:
 	if _built:
 		return
 	_built = true
+	_config = config
+	mission_id = str(config.get("id", "control-room"))
+	for row in config.get("map", MAP):
+		map_rows.append(str(row))
+	var panel_value: Variant = config.get("panel")
+	var core_value: Variant = config.get("core")
+	var exit_value: Variant = config.get("exit")
+	_panel_position = panel_value if panel_value is Vector3 else Vector3(9, 0, 15)
+	_core_position = core_value if core_value is Vector3 else Vector3(17, 0, 11)
+	_exit_position = exit_value if exit_value is Vector3 else Vector3(23, 0, 3)
 	_make_materials()
 	_make_environment()
-	_solid_box("Floor", Vector3(13, -0.15, 10), Vector3(26, 0.3, 20), _materials["floor"])
-	_solid_box("Ceiling", Vector3(13, 3.15, 10), Vector3(26, 0.3, 20), _materials["ceiling"])
-	for z in MAP.size():
-		for x in MAP[z].length():
-			if MAP[z][x] == "#":
+	var width: float = map_rows[0].length() * 2.0
+	var depth: float = map_rows.size() * 2.0
+	_solid_box("Floor", Vector3(width / 2, -0.15, depth / 2), Vector3(width, 0.3, depth), _materials["floor"])
+	_solid_box("Ceiling", Vector3(width / 2, 3.15, depth / 2), Vector3(width, 0.3, depth), _materials["ceiling"])
+	for z in map_rows.size():
+		for x in map_rows[z].length():
+			if map_rows[z][x] == "#":
 				_solid_box("Wall_%d_%d" % [x, z], Vector3(x * 2 + 1, 1.5, z * 2 + 1), Vector3(2, 3, 2), _materials["concrete"])
 				_wall_details(x, z)
 			else:
 				_floor_details(x, z)
-	_make_gate()
-	_make_panel()
-	_make_core()
+	if mission_id == "control-room":
+		_make_gate()
+		_make_core()
+		_make_control_devices()
+		_label("DIRECT / SECURITY", Vector3(3.1, 2.25, 11), Vector3.ZERO, Color("dfb265"))
+		_label("MAINTENANCE / PANEL", Vector3(10.7, 2.23, 15), Vector3.ZERO, Color("8ed5c8"))
+		_mesh_box(self, "EquipmentRack", Vector3(13.4, 0.9, 11.68), Vector3(0.72, 1.8, 0.32), _materials["steel"])
+		for i in 5:
+			_mesh_box(self, "RackVent", Vector3(13.4, 0.36 + i * 0.27, 11.5), Vector3(0.55, 0.08, 0.015), _materials["dark"])
+			_mesh_box(self, "RackIndicator", Vector3(13.61, 0.4 + i * 0.27, 11.485), Vector3(0.045, 0.045, 0.02), _materials["cyan"])
+	if mission_id != "breach":
+		_make_panel()
 	_make_extraction()
 	_make_practicals()
-	_label("DIRECT / SECURITY", Vector3(3.1, 2.25, 11), Vector3(0, 90, 0), Color("dfb265"))
-	_label("MAINTENANCE / PANEL", Vector3(10.7, 2.23, 15), Vector3.ZERO, Color("8ed5c8"))
-	_label("CONTROL / DATA CORE", Vector3(17.8, 2.32, 11), Vector3(0, -90, 0), Color("7eddd7"))
-	_label("EXTRACT", Vector3(23, 2.28, 2.06), Vector3.ZERO, Color("9bddb3"))
-	# Nonblocking set dressing is tucked against walls, away from the guard's firing lane.
-	_mesh_box(self, "EquipmentRack", Vector3(13.4, 0.9, 11.68), Vector3(0.72, 1.8, 0.32), _materials["steel"])
-	for i in 5:
-		_mesh_box(self, "RackVent", Vector3(13.4, 0.36 + i * 0.27, 11.5), Vector3(0.55, 0.08, 0.015), _materials["dark"])
-		_mesh_box(self, "RackIndicator", Vector3(13.61, 0.4 + i * 0.27, 11.485), Vector3(0.045, 0.045, 0.02), _materials["cyan"])
-	set_panel_disabled(_panel_disabled)
-	set_gate(_gate_closed)
+	set_panel_disabled(false)
+	set_gate(mission_id == "control-room")
+	if mission_id == "blackout":
+		set_power_restored(false)
+
 
 func set_gate(closed: bool) -> void:
 	_gate_closed = closed
@@ -166,7 +198,7 @@ func _solid_box(node_name: String, center: Vector3, size: Vector3, material: Mat
 	return body
 
 func _open(x: int, z: int) -> bool:
-	return z >= 0 and z < MAP.size() and x >= 0 and x < MAP[z].length() and MAP[z][x] != "#"
+	return z >= 0 and z < map_rows.size() and x >= 0 and x < map_rows[z].length() and map_rows[z][x] != "#"
 
 func _wall_details(x: int, z: int) -> void:
 	var center := Vector3(x * 2 + 1, 1.5, z * 2 + 1)
@@ -207,38 +239,138 @@ func _make_gate() -> void:
 func _make_panel() -> void:
 	var panel := Node3D.new()
 	panel.name = "AlarmPanel"
-	panel.position = Vector3(9, 0, 15)
+	panel.position = _panel_position
 	add_child(panel)
 	_mesh_box(panel, "Stand", Vector3(0, 0.54, 0), Vector3(0.62, 1.08, 0.4), _materials["steel"])
 	_mesh_box(panel, "Bezel", Vector3(0, 1.22, 0), Vector3(0.75, 0.52, 0.28), _materials["dark"])
 	_panel_screen = _mesh_box(panel, "Screen", Vector3(-0.383, 1.23, 0), Vector3(0.014, 0.3, 0.2), _materials["cyan"])
 	for i in 3:
 		_mesh_box(panel, "Key", Vector3(-0.326, 0.87, -0.1 + i * 0.1), Vector3(0.022, 0.07, 0.055), _materials["hazard"])
-	_panel_light = _light(Vector3(8.4, 1.85, 15), Color("62dac5"), 0.75, 4.5)
-	_label("E / ALARM PANEL", Vector3(9, 1.9, 15), Vector3(0, 90, 0), Color("8ed5c8"))
+	_panel_light = _light(_panel_position + Vector3(-0.6, 1.85, 0), Color("62dac5"), 0.75, 4.5)
+	_label("E / BACKUP POWER" if mission_id == "blackout" else "E / ALARM PANEL", _panel_position + Vector3(0, 1.9, 0), Vector3.ZERO, Color("8ed5c8"))
 
 func _make_core() -> void:
 	var core := Node3D.new()
 	core.name = "Core"
-	core.position = Vector3(17, 0, 11)
+	core.position = _core_position
 	add_child(core)
 	_mesh_box(core, "Base", Vector3(0, 0.18, 0), Vector3(0.7, 0.36, 0.7), _materials["steel"])
 	_mesh_box(core, "DataCapsule", Vector3(0, 0.8, 0), Vector3(0.32, 0.86, 0.32), _materials["cyan"])
 	_mesh_box(core, "Cap", Vector3(0, 1.3, 0), Vector3(0.5, 0.14, 0.5), _materials["trim"])
-	_core_light = _light(Vector3(17, 1.6, 11), Color("65ceca"), 1.05, 5.0)
+	_core_light = _light(_core_position + Vector3(0, 1.6, 0), Color("65ceca"), 1.05, 5.0)
 
 func _make_extraction() -> void:
-	_mesh_box(self, "ExtractionPad", Vector3(23, 0.018, 3), Vector3(1.25, 0.03, 1.25), _materials["green"])
-	for x in [22.3, 23.7]:
-		_mesh_box(self, "ExitPost", Vector3(x, 1.2, 2.4), Vector3(0.14, 2.4, 0.14), _materials["steel"])
-		_mesh_box(self, "ExitLight", Vector3(x, 1.6, 2.5), Vector3(0.1, 1.3, 0.06), _materials["green"])
-	_light(Vector3(23, 2.4, 3), Color("92d6a7"), 1.2, 6.0)
+	_exit_pad = _mesh_box(self, "ExtractionPad", _exit_position + Vector3(0, 0.018, 0), Vector3(1.25, 0.03, 1.25), _materials["green"])
+	for offset in [-0.7, 0.7]:
+		_mesh_box(self, "ExitPost", _exit_position + Vector3(offset, 1.2, -0.6), Vector3(0.14, 2.4, 0.14), _materials["steel"])
+		_exit_light_meshes.append(_mesh_box(self, "ExitLight", _exit_position + Vector3(offset, 1.6, -0.5), Vector3(0.1, 1.3, 0.06), _materials["green"]))
+	_exit_light = _light(_exit_position + Vector3(0, 2.4, 0), Color("92d6a7"), 1.2, 6.0)
+	_label("CONTROL SECTOR" if mission_id == "breach" else "EXTRACTION LIFT" if mission_id == "blackout" else "EXTRACT", _exit_position + Vector3(0, 2.28, 0), Vector3.ZERO, Color("9bddb3"))
 
 func _make_practicals() -> void:
-	for pos in [Vector3(3, 2.87, 17), Vector3(3, 2.87, 11), Vector3(9, 2.87, 11), Vector3(15, 2.87, 15), Vector3(21, 2.87, 7)]:
+	var positions: Array[Vector3] = [Vector3(3, 2.87, 17), Vector3(3, 2.87, 11), Vector3(9, 2.87, 11), Vector3(15, 2.87, 15), Vector3(21, 2.87, 7)]
+	if mission_id == "breach":
+		positions = [Vector3(4, 2.87, 4), Vector3(12, 2.87, 4), Vector3(18, 2.87, 10), Vector3(22, 2.87, 16)]
+	elif mission_id == "blackout":
+		positions = [Vector3(3, 2.87, 3), Vector3(14, 2.87, 9), Vector3(7, 2.87, 15), Vector3(23, 2.87, 3)]
+	for pos in positions:
 		_mesh_box(self, "LampHousing", pos, Vector3(0.85, 0.13, 0.3), _materials["dark"])
 		_mesh_box(self, "LampLens", pos + Vector3(0, -0.075, 0), Vector3(0.68, 0.03, 0.22), _materials["amber"])
-		_light(pos + Vector3(0, -0.3, 0), Color("efd098"), 1.4, 7.0)
+		var fixture := _light(pos + Vector3(0, -0.3, 0), Color("efd098"), 1.4, 7.0)
+		fixture.set_meta("base_energy", 1.4)
+		_practical_lights.append(fixture)
+
+func _make_control_devices() -> void:
+	# Device meshes never block movement or physics rays. Their hit areas are owned
+	# by the encounter module so appearance cannot silently change hit tolerance.
+	var bulkhead_body := _solid_box("Bulkhead", Vector3(17, 1.5, 13), Vector3(2, 3, 2), _materials["steel"])
+	_bulkhead = bulkhead_body
+	for child in bulkhead_body.get_children():
+		if child is CollisionShape3D:
+			_bulkhead_shapes.append(child)
+	set_bulkhead(false)
+	for entry in [["SERVICE POWER", Vector3(13, 0, 15)], ["OVERLOAD GRID", Vector3(17, 0, 15)]]:
+		var at: Vector3 = entry[1]
+		_mesh_box(self, "DeviceStand", at + Vector3(0, 0.48, 0), Vector3(0.6, 0.96, 0.35), _materials["steel"])
+		_mesh_box(self, "DeviceBezel", at + Vector3(0, 1.15, 0), Vector3(0.65, 0.5, 0.25), _materials["dark"])
+		_mesh_box(self, "DeviceScreen", at + Vector3(-0.331, 1.15, 0), Vector3(0.015, 0.32, 0.18), _materials["cyan"])
+		_label(str(entry[0]), at + Vector3(0, 1.95, 0), Vector3.ZERO, Color("8ed5c8"))
+	_label("E / BULKHEAD SWITCH", Vector3(15, 1.9, 15), Vector3.ZERO, Color("d8ca90"))
+	var camera := Node3D.new()
+	camera.name = "SecurityCamera"
+	camera.position = Vector3(14.6, 0, 11)
+	add_child(camera)
+	_mesh_box(camera, "CameraBody", Vector3(0, 1.55, 0), Vector3(0.55, 0.4, 0.45), _materials["steel"])
+	_camera_screen = _mesh_box(camera, "CameraLens", Vector3(-0.285, 1.55, 0), Vector3(0.025, 0.2, 0.2), _materials["amber"])
+	_label("SECURITY CAMERA", Vector3(14.6, 2.1, 11), Vector3.ZERO, Color("dfb265"))
+	_mesh_box(self, "ServiceLampMount", Vector3(7, 1, 11.72), Vector3(0.18, 2, 0.18), _materials["steel"])
+	_service_lamp = _mesh_box(self, "ServiceLamp", Vector3(7, 1.5, 11.6), Vector3(0.2, 0.4, 0.2), _materials["amber"])
+	_service_lamp_light = _light(Vector3(7, 1.5, 11.5), Color("edcc95"), 0.8, 5.0)
+	var intel := Node3D.new()
+	intel.name = "OptionalIntel"
+	intel.position = Vector3(17.55, 0, 11.55)
+	add_child(intel)
+	_mesh_box(intel, "Manifest", Vector3(0, 0.7, 0), Vector3(0.24, 0.5, 0.24), _materials["cyan"])
+	_label("OPTIONAL INTEL", Vector3(17, 1.9, 11), Vector3.ZERO, Color("8ed5c8"), intel)
+	# Label uses a local position because its parent is the manifest group.
+	intel.get_child(intel.get_child_count() - 1).position = Vector3(0, 1.9, 0)
+	var cache := Node3D.new()
+	cache.name = "HiddenCache"
+	cache.position = Vector3(15, 0, 17)
+	add_child(cache)
+	_mesh_box(cache, "SupplyBox", Vector3(0, 0.35, 0), Vector3(0.75, 0.7, 0.65), _materials["steel"])
+	_mesh_box(cache, "MedicalStripe", Vector3(-0.38, 0.4, 0), Vector3(0.02, 0.16, 0.45), _materials["green"])
+
+func set_optional_collected(intel: bool, secret: bool) -> void:
+	var manifest := get_node_or_null("OptionalIntel") as Node3D
+	if manifest:
+		manifest.visible = not intel
+	var cache := get_node_or_null("HiddenCache") as Node3D
+	if cache:
+		cache.visible = not secret
+
+func set_bulkhead(closed: bool) -> void:
+	if not is_instance_valid(_bulkhead):
+		return
+	_bulkhead.visible = closed
+	for shape in _bulkhead_shapes:
+		shape.set_deferred("disabled", not closed)
+
+func set_service_power(enabled: bool) -> void:
+	_service_enabled = enabled
+	_apply_service_lighting()
+
+func set_service_lamp(enabled: bool) -> void:
+	_lamp_enabled = enabled
+	if is_instance_valid(_service_lamp):
+		_service_lamp.material_override = _materials["amber"] if enabled else _materials["off"]
+	_apply_service_lighting()
+
+func _apply_service_lighting() -> void:
+	for fixture in _practical_lights:
+		var energy: float = float(fixture.get_meta("base_energy", 1.4)) * (1.0 if _service_enabled else 0.5)
+		if not _lamp_enabled and fixture.position.x < 10 and absf(fixture.position.z - 11) < 3:
+			energy *= 0.65
+		fixture.light_energy = energy
+	if is_instance_valid(_service_lamp_light):
+		_service_lamp_light.light_energy = (0.8 if _lamp_enabled else 0.0) * (1.0 if _service_enabled else 0.5)
+
+func set_camera_enabled(enabled: bool) -> void:
+	if is_instance_valid(_camera_screen):
+		_camera_screen.material_override = _materials["amber"] if enabled else _materials["off"]
+
+func set_power_restored(enabled: bool) -> void:
+	if mission_id != "blackout":
+		return
+	if is_instance_valid(_panel_screen):
+		_panel_screen.material_override = _materials["green"] if enabled else _materials["cyan"]
+	if is_instance_valid(_exit_pad):
+		_exit_pad.material_override = _materials["green"] if enabled else _materials["amber"]
+	for lens in _exit_light_meshes:
+		lens.material_override = _materials["green"] if enabled else _materials["amber"]
+	if is_instance_valid(_exit_light):
+		_exit_light.light_color = Color("92d6a7") if enabled else Color("e5ad65")
+
 
 func _light(pos: Vector3, color: Color, energy: float, radius: float) -> OmniLight3D:
 	var light := OmniLight3D.new()

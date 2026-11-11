@@ -269,7 +269,7 @@ func finish(won: bool) -> void:
 	var accuracy := "%d%% (%d/%d)" % [roundi(float(hits) / shots * 100), hits, shots] if shots else "No shots"
 	_show_menu("result", "SECTION CLEAR" if won else "MISSION FAILED", "PARTIAL PORT RESULT\n\nActive time: %.1fs · Accuracy: %s\nAttempt: %d · Alarm: %s\n\nNo campaign decisions are committed by this milestone.\nRanks, optional objectives and other missions remain browser-only." % [elapsed, accuracy, attempts, "triggered" if alarm_triggered else "avoided"])
 
-func register_event(event: String, detail: String = "") -> void:
+func register_event(event: String, detail: String = "", _bot_id: String = "") -> void:
 	events.append({"attempt": attempts, "time": elapsed, "event": event, "detail": detail})
 
 static func planar_distance(a: Vector3, b: Vector3) -> float:
