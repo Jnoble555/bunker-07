@@ -10,7 +10,7 @@ const server = http.createServer((req, res) => {
   const file = path.resolve(root, relative);
   if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
   try {
-    res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.html') ? 'text/html' : 'text/plain');
+    res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.html') ? 'text/html' : file.endsWith('.css') ? 'text/css' : 'text/plain');
     res.end(fs.readFileSync(file));
   } catch { res.writeHead(404).end(); }
 });

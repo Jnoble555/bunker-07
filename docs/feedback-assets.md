@@ -1,6 +1,6 @@
 # Reactive bunker art and audio
 
-All added visuals in `bunker-art.js` and synthesized effects in `audio.js` are original project source. No external images, recordings, models, fonts or asset packs were imported; no external asset license is required.
+All added visuals in `src/bunker-art.js` and synthesized effects in `src/audio.js` are original project source. No external images, recordings, models, fonts or asset packs were imported; no external asset license is required.
 
 ## API
 

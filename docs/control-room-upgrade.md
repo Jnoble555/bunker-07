@@ -26,7 +26,7 @@ Original procedural art has [documented provenance](assets.md); no external visu
 
 ## Verification
 
-`npm install` then `npm test` runs the Playwright browser harness. It uses installed Windows Chrome at the explicit path in `tools/playtest.cjs`; adjust that path for another system. The game itself still runs directly from `index.html` without dependencies or a build.
+`npm install` then `npm test` runs the Playwright browser harness. It uses installed Windows Chrome at the explicit path in `tests/playtest.cjs`; adjust that path for another system. The game itself still runs directly from `index.html` without dependencies or a build.
 
 Latest [machine-readable results](playtest-results.json): 41 checks passed, no JavaScript page errors. Coverage includes both collision-based routes through extraction, interrupted detection, alarm activation, exactly one reinforcement, panel prevention/silencing, core gating, shooting, attack windup/damage, keyboard reload, pause UI, and rendering all three missions. Most gameplay checks advance the actual game update functions deterministically; reload and pause also use browser keyboard input. This is automated browser playtesting, not a claim of a complete human mouse/pointer-lock campaign playthrough.
 
@@ -50,4 +50,4 @@ Maintenance approach, same camera:
 
 ![After maintenance](screenshots/after-maintenance.png)
 
-`tools/before.html` preserves the starting renderer for reproducible comparison screenshots.
+`tests/fixtures/before.html` preserves the starting renderer for reproducible comparison screenshots.

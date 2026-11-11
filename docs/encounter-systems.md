@@ -1,6 +1,6 @@
 # Reactive encounter systems
 
-`bunker-systems.js` is original project code. It has no asset downloads or third-party runtime dependencies. Root integration owns combat damage, renderer changes, UI, and campaign menu wiring; this module owns device state and security patrol behavior.
+`src/bunker-systems.js` is original project code. It has no asset downloads or third-party runtime dependencies. Root integration owns combat damage, renderer changes, UI, and campaign menu wiring; this module owns device state and security patrol behavior.
 
 ## Playable additions
 

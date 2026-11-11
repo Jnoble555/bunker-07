@@ -12,7 +12,7 @@ No remaining blocking defect was found in this review. This statement is bounded
 
 ## Independent browser checks
 
-Run `node tools/next-level-test.cjs` with installed Windows Chrome (or set `CHROME_PATH`). The server uses an ephemeral localhost port and closes its browser/server after success or failure.
+Run `node tests/next-level-test.cjs` with installed Windows Chrome (or set `CHROME_PATH`). The server uses an ephemeral localhost port and closes its browser/server after success or failure.
 
 The latest run passed 53 checks with no JavaScript page errors. It tests:
 

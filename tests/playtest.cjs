@@ -3,10 +3,10 @@ const fs=require('fs'),http=require('http'),path=require('path');
 const root=path.resolve(__dirname,'..');
 const server=http.createServer((req,res)=>{
  let name=req.url.split('?')[0];
- if(name==='/before') {res.setHeader('Content-Type','text/html');res.end(fs.readFileSync(path.join(root,'tools/before.html')));return;}
+ if(name==='/before') {res.setHeader('Content-Type','text/html');res.end(fs.readFileSync(path.join(root,'tests/fixtures/before.html')));return;}
  if(name==='/')name='/index.html';
  const file=path.join(root,name);if(!file.startsWith(root)){res.writeHead(403).end();return;}
- try{res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'text/plain');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}
+ try{res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':'text/plain');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}
 });
 (async()=>{
  await new Promise(r=>server.listen(8765,'127.0.0.1',r));

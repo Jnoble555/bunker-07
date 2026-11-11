@@ -36,7 +36,21 @@ To analyze the CSV, group events by run. Use the final cumulative shots and hits
 
 ## Build on it
 
-Gameplay and menus are in `index.html`; mission definitions are in `breach-mission.js` and `blackout-mission.js`, and optional synthesized sound effects are in `audio.js`. These load locally without a build step. Maps are grids of walls and open tiles. The raycasting function finds wall intersections, the update loop handles gameplay, and the renderer draws the scene.
+The entry page is `index.html`. Gameplay, rendering and menus are in `src/game.js`, encounter systems are in `src/bunker-systems.js`, and mission definitions are in `src/missions/`. Original procedural art and synthesized sound are in `src/bunker-art.js` and `src/audio.js`. Styles are in `styles/game.css`. These load locally without a build step. Maps are grids of walls and open tiles. The raycasting function finds wall intersections, the update loop handles gameplay, and the renderer draws the scene.
+
+```text
+bunker-07/
+├── index.html               # Browser / GitHub Pages entry point
+├── src/                     # Game code, art and audio
+│   └── missions/            # Mission definitions
+├── styles/                  # Game and menu styles
+├── tests/                   # Browser checks
+│   └── fixtures/            # Before-upgrade comparison page
+├── docs/                    # Research, reports and test results
+│   └── screenshots/         # Visual evidence
+├── package.json             # Optional development test commands
+└── README.md
+```
 
 - [ ] Playtest mouse capture, settings persistence, and CSV export in additional desktop browsers.
 - [x] Browser-test campaign progression, retries, and mission CSV analytics in Chrome on Windows.
