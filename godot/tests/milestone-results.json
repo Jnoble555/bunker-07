@@ -1,0 +1,190 @@
+{
+	"checks": [
+		{
+			"name": "fresh run health, magazine and active state",
+			"ok": true
+		},
+		{
+			"name": "camera horizontal field of view matches browser",
+			"ok": true
+		},
+		{
+			"name": "world blocks sight across maintenance partition",
+			"ok": true
+		},
+		{
+			"name": "direct hallway has unobstructed sight",
+			"ok": true
+		},
+		{
+			"name": "real player collision prevents crossing partition",
+			"ok": true
+		},
+		{
+			"name": "diagonal movement is normalized",
+			"ok": true
+		},
+		{
+			"name": "arrow aim rotates player",
+			"ok": true
+		},
+		{
+			"name": "pause action reaches menu while game is active",
+			"ok": true
+		},
+		{
+			"name": "pause action resumes through always-processing controller",
+			"ok": true
+		},
+		{
+			"name": "hitscan damages armored guard and rewards hit",
+			"ok": true
+		},
+		{
+			"name": "hit interrupts attack and applies armored stagger",
+			"ok": true
+		},
+		{
+			"name": "hit and muzzle feedback begin",
+			"ok": true
+		},
+		{
+			"name": "shot cooldown rejects immediate second fire",
+			"ok": true
+		},
+		{
+			"name": "three successful hits disable representative enemy",
+			"ok": true
+		},
+		{
+			"name": "disabled guard no longer intercepts or rewards shots",
+			"ok": true
+		},
+		{
+			"name": "grazing shot preserves reference .28 tile hit tolerance",
+			"ok": true
+		},
+		{
+			"name": "shots inside nonblocking enemy hurtbox still hit",
+			"ok": true
+		},
+		{
+			"name": "overlapping enemy behind camera is not a target",
+			"ok": true
+		},
+		{
+			"name": "wall occludes actual weapon shot",
+			"ok": true
+		},
+		{
+			"name": "reload starts without instantly refilling",
+			"ok": true
+		},
+		{
+			"name": "reload blocks firing",
+			"ok": true
+		},
+		{
+			"name": "pause freezes reload and active clock",
+			"ok": true
+		},
+		{
+			"name": "pause does not queue a delayed shot",
+			"ok": true
+		},
+		{
+			"name": "reload completes to eight rounds after resume",
+			"ok": true
+		},
+		{
+			"name": "panel refuses interaction beyond .85 tile",
+			"ok": true
+		},
+		{
+			"name": "panel disables within .85 tile",
+			"ok": true
+		},
+		{
+			"name": "disabled panel prevents later alarm",
+			"ok": true
+		},
+		{
+			"name": "repeat interaction remains disabled",
+			"ok": true
+		},
+		{
+			"name": "nearby alerted guard starts attack windup",
+			"ok": true
+		},
+		{
+			"name": "pause freezes enemy windup",
+			"ok": true
+		},
+		{
+			"name": "completed armored attack deals eighteen damage",
+			"ok": true
+		},
+		{
+			"name": "breaking sight cancels timed attack",
+			"ok": true
+		},
+		{
+			"name": "stagger cancels pending attack immediately",
+			"ok": true
+		},
+		{
+			"name": "guard facing and continuous sight trigger alarm",
+			"ok": true
+		},
+		{
+			"name": "alerted guard chases within visible hall",
+			"ok": true
+		},
+		{
+			"name": "panel silences alarm without undoing trigger history",
+			"ok": true
+		},
+		{
+			"name": "partition prevents guard detection",
+			"ok": true
+		},
+		{
+			"name": "core stays locked before alarm or panel",
+			"ok": true
+		},
+		{
+			"name": "core gate blocks physical sight before pickup",
+			"ok": true
+		},
+		{
+			"name": "unlocked core pickup opens gate",
+			"ok": true
+		},
+		{
+			"name": "core extraction completes partial milestone",
+			"ok": true
+		},
+		{
+			"name": "retry resets all included encounter state",
+			"ok": true
+		},
+		{
+			"name": "collision-driven route reaches usable maintenance panel",
+			"ok": true
+		},
+		{
+			"name": "complete maintenance route crosses opened gate and extracts",
+			"ok": true
+		},
+		{
+			"name": "successful result remains explicitly partial",
+			"ok": true
+		},
+		{
+			"name": "retry after extraction restores closed gate",
+			"ok": true
+		}
+	],
+	"engine": "4.7.2-stable (official)",
+	"failures": 0
+}

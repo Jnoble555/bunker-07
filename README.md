@@ -1,5 +1,7 @@
 # Bunker 07
 
+An initial **partial Godot Control Room port** is available in [`godot/`](godot/README.md). It is a separate native milestone; the browser version below remains the complete playable campaign. See the [migration parity checklist](docs/godot/parity.md) and [native verification](docs/godot/verification.md).
+
 ### [▶ Play Bunker 07 in your browser](https://jnoble555.github.io/bunker-07/)
 
 **No download or installation required.** Open the game in a desktop browser and choose **Start Campaign**.
