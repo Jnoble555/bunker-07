@@ -1,10 +1,18 @@
 # Bunker 07
 
+### [▶ Play Bunker 07 in your browser](https://jnoble555.github.io/bunker-07/)
+
+**No download or installation required.** Open the game in a desktop browser and choose **Start Campaign**.
+
 A Wolfenstein 3D-inspired browser FPS built with OpenAI Codex for a Web Analytics class. The original map and security bots are drawn in JavaScript using Canvas 2D.
 
-## Play locally
+## Play
 
-Double-click `index.html` (or open it in a current desktop browser) and choose **Start Campaign**. No installation, network access, or build step is required. Start Campaign opens a short mission briefing before deployment. Breach introduces combat, Control Room offers the guarded direct and longer maintenance routes, and Blackout asks you to restore power and reach the extraction lift.
+**[Launch the hosted game →](https://jnoble555.github.io/bunker-07/)**
+
+Start Campaign opens a short mission briefing before deployment. Breach introduces combat, Control Room offers the guarded direct and longer maintenance routes, and Blackout asks you to restore power and reach the extraction lift.
+
+To play offline, download or clone this repository and open `index.html` in a desktop browser. The local version requires no installation, network access, or build step.
 
 | Control | Action |
 | --- | --- |
