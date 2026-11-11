@@ -29,15 +29,10 @@ func setup(owner_controller: Node) -> void:
 	camera.near = 0.04
 	camera.current = true
 	add_child(camera)
-	weapon = Node3D.new()
+	weapon = preload("res://scenes/security_sidearm.tscn").instantiate()
 	camera.add_child(weapon)
-	weapon.position = Vector3(0.18, -0.25, -0.43)
-	_add_weapon_box(Vector3(0.14, 0.17, 0.38), Vector3.ZERO, Color("4d5a44"))
-	_add_weapon_box(Vector3(0.07, 0.08, 0.28), Vector3(0, 0.055, -0.19), Color("9a9d7b"))
-	_add_weapon_box(Vector3(0.045, 0.09, 0.035), Vector3(0, 0.10, -0.27), Color("202d25"))
-	_add_weapon_box(Vector3(0.08, 0.17, 0.10), Vector3(0, -0.14, 0.08), Color("202d25"))
-	_add_weapon_box(Vector3(0.09, 0.10, 0.20), Vector3(-0.12, -0.08, 0.12), Color("737457"))
-	muzzle = _add_weapon_box(Vector3(0.10, 0.10, 0.06), Vector3(0, 0.055, -0.36), Color("ffce72"))
+	weapon.position = Vector3(0.18, -0.16, -0.43)
+	muzzle = _add_weapon_box(Vector3(0.10, 0.10, 0.06), Vector3(0, 0.055, -0.20), Color("ffce72"))
 	var glow := StandardMaterial3D.new()
 	glow.albedo_color = Color("ffe0a0")
 	glow.emission_enabled = true
@@ -47,7 +42,7 @@ func setup(owner_controller: Node) -> void:
 	glow.render_priority = 100
 	muzzle.material_override = glow
 	muzzle_light = OmniLight3D.new()
-	muzzle_light.position = Vector3(0, 0.055, -0.35)
+	muzzle_light.position = Vector3(0, 0.055, -0.20)
 	muzzle_light.light_color = Color("ffc577")
 	muzzle_light.omni_range = 3.5
 	muzzle_light.light_energy = 0
@@ -77,9 +72,10 @@ func reset_player() -> void:
 	rotation = Vector3(0, -PI / 2, 0)
 	velocity = Vector3.ZERO
 	if weapon:
-		weapon.position = Vector3(0.18, -0.25, -0.43)
+		weapon.position = Vector3(0.18, -0.16, -0.43)
 		muzzle.visible = false
 		muzzle_light.light_energy = 0
+		weapon.pose(0, 0)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not controller or not controller.active or get_tree().paused:
@@ -103,6 +99,7 @@ func _physics_process(delta: float) -> void:
 		var progress: float = 1.0 - controller.reload_remaining / 0.8
 		reload_offset = (progress / 0.25 if progress < 0.25 else (1.0 - progress) / 0.75) * 0.24
 	var sway: float = sin(controller.elapsed * 10) * 0.012 if input.length() > 0 else 0.0
-	weapon.position = Vector3(0.18 + sway, -0.25 - reload_offset, -0.43 + controller.flash * 0.8)
+	weapon.position = Vector3(0.18 + sway, -0.16 - reload_offset, -0.43 + controller.flash * 0.8)
+	weapon.pose(controller.flash, controller.reload_remaining)
 	muzzle.visible = controller.flash > 0
 	muzzle_light.light_energy = 1.3 if controller.flash > 0 else 0.0
