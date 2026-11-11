@@ -13,6 +13,7 @@ Double-click `index.html` (or open it in a current desktop browser) and choose *
 | Click or Space | Fire |
 | R | Reload |
 | E | Use a nearby panel to disable/silence the alarm or restore power |
+| J | Open the field log (pauses play) |
 | P or Esc | Pause |
 
 The title screen includes **Controls** and **Settings**. Settings adjusts master volume, mute, and mouse sensitivity; **Reset to defaults** restores the original values. Preferences are saved in browser storage when available. Gameplay remains playable if storage or browser audio is unavailable. The pause menu provides Resume, Settings, and a confirmed Return to title action.
@@ -39,3 +40,13 @@ There is no build step. Use a desktop browser for the full first-person experien
 ## Control Room visual upgrade
 
 The industrial art, renderer constraints, applied Lode / Level Design Book techniques, before-and-after screenshots and browser verification are documented in [the upgrade report](docs/control-room-upgrade.md). All new visual assets are original procedural drawings; see [asset provenance](docs/assets.md). The optional development browser harness runs with `npm install` and `npm test` (Windows Chrome); playing the game needs neither.
+
+## Reactive bunker encounters
+
+Control Room now has a scanning camera, an armored patrol that investigates shots, and a fast scout reinforcement. Shoot the camera or service lamp, reroute maintenance power to blind surveillance at the cost of lighting, operate the bulkhead, or overload the grid once to stagger nearby visible enemies. Aim at a device's horizontal position; the renderer has no vertical aiming. Press E at the separate alarm panel to prevent/silence the alarm. Nearby devices show an E prompt while the mission objective remains visible.
+
+The archive near the core holds optional intel: taking it triggers security unless the alarm panel is disabled. Search the maintenance alcove for a one-use medical cache and recovered log. Use J or the pause menu to read transmissions. Intel, secrets, active time, accuracy and stealth contribute to local result ranks; there is no online leaderboard. Camera and lamp hits count toward accuracy.
+
+Extracting after a quiet panel shutdown disables Blackout's stationary ranged turret. An alarm instead adds an armored pursuer. Recovered intel supplies a later clue. These consequences commit only on successful extraction; failed attempts reset devices and provisional rewards. Start Campaign clears prior campaign decisions while preserving the current session CSV.
+
+New impact sparks, enemy stagger, damage-direction cues and positional synthesized audio reinforce combat. All visual/audio assets are original. Implementation details, limits and verification are in [the expansion report](docs/next-level-release.md), [systems documentation](docs/encounter-systems.md), and [art/audio provenance](docs/feedback-assets.md). `npm test` runs both the existing campaign checks and the independently authored encounter suite.

@@ -34,8 +34,8 @@ const server=http.createServer((req,res)=>{
   player.x=2;player.y=5.5;for(let i=0;i<30;i++)update(.04);
   check('alarm reinforcement once',alarmTriggered&&enemies.length===2);triggerAlarm();check('no duplicate reinforcement',enemies.length===2);
   player.x=4.5;player.y=7.5;usePanel();check('silence preserves reinforcement',!alarmActive&&enemies.length===2);
-  init();player.x=2;player.y=5.5;player.angle=0;shoot();cooldown=0;shoot();check('bot hit and killed',enemies[0].hp===0);
-  init();alarmTriggered=true;player.x=4;player.y=5.5;enemies[0].attack=0;update(.01);check('attack windup',enemies[0].attackWindup>0);update(.8);check('attack damage',player.hp===88);
+  init();player.x=4.5;player.y=5.5;player.angle=0;enemies[0].x=6;const armorHP=enemies[0].hp;for(let i=0;i<armorHP;i++){cooldown=0;shoot();}check('armored bot takes three hits and is killed',armorHP===3&&enemies[0].hp===0&&hits===3);
+  init();alarmTriggered=true;player.x=4;player.y=5.5;enemies[0].attack=0;update(.01);check('attack windup',enemies[0].attackWindup>0);update(.8);check('armored attack damage',player.hp===82);
   for(let i=0;i<3;i++){missionIndex=i;reset();render();check('mission renders '+mission.id,Number.isFinite(depth[240]));}
   // Traverse using the real collision/movement/update path, without teleporting between waypoints.
   const walkTo=(x,y)=>{

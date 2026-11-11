@@ -1,6 +1,6 @@
 {
   "name": "bunker-07",
   "private": true,
-  "scripts": {"test": "node tools/playtest.cjs"},
+  "scripts": {"test": "node tools/playtest.cjs && node tools/next-level-test.cjs", "test:next": "node tools/next-level-test.cjs"},
   "devDependencies": {"playwright": "1.65.0"}
 }

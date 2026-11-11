@@ -39,21 +39,25 @@ body{background:#101311;color:#dddcc9} header strong{letter-spacing:.25em;color:
 .label{color:#bcad7c} #hud{background:#1c231f;border:1px solid #525944;gap:8px;font:11px monospace;color:#c6cbb4;letter-spacing:.04em}
 #hud span{padding:5px 8px;border-left:2px solid #69735a} #health{color:#d7dcb7} #ammo{color:#e8bf76}
 #objective{flex:1;min-width:230px;color:#8fd0c8} button{background:#c4b47f;color:#172019}
+#radio{position:absolute;bottom:10px;left:12px;max-width:75%;padding:9px 12px;color:#d1e9d9;background:#0b1719eb;border-left:3px solid #ba9c5d;font:12px monospace;pointer-events:none}
+#radio[hidden]{display:none} #journal-entries{max-width:560px;margin:auto;text-align:left;font:13px/1.5 monospace} #journal-entries p{max-width:none;border-left:2px solid #6b8168;padding-left:12px}
 </style>
 <main>
 <header><strong>BUNKER 07</strong><span class="label">RETRO FPS / TRAINING SIM</span></header>
 <div id="stage">
 <canvas id="view" width="480" height="270" aria-label="First-person bunker view"></canvas>
+<div id="radio" role="status" aria-live="polite" hidden></div>
 <div id="tutorial" role="status" aria-live="polite" hidden></div>
 <div id="overlay"><section>
   <section id="title-screen"><div class="label">RETRO FPS / THREE-MISSION CAMPAIGN</div><h1>BUNKER 07</h1><p>Breach the training sector, secure Control Room, and restore power to the Blackout extraction lift.</p><nav><button id="start-campaign">Start Campaign</button><button id="open-controls">Controls</button><button id="open-settings">Settings</button></nav></section>
-  <section id="controls-screen" hidden><div class="label">FIELD MANUAL</div><h1>CONTROLS</h1><p>WASD or ↑/↓ move · Mouse or ←/→ aim · Click or Space fire · R reload · E interact · P or Esc pause</p><p>Move away or break line of sight when a bot winds up an attack.</p><nav><button id="controls-back">Back</button></nav></section>
+  <section id="controls-screen" hidden><div class="label">FIELD MANUAL</div><h1>CONTROLS</h1><p>WASD or ↑/↓ move · Mouse or ←/→ aim · Click or Space fire · R reload · E interact · J field log · P or Esc pause</p><p>Move away or break line of sight when a bot winds up an attack.</p><nav><button id="controls-back">Back</button></nav></section>
   <section id="settings-screen" hidden><div class="label">PREFERENCES</div><h1>SETTINGS</h1><form id="settings-form">
     <label for="volume">Master volume</label><span><input id="volume" type="range" min="0" max="1" step="0.05"><output id="volume-value" for="volume"></output></span>
     <label class="toggle" for="mute"><input id="mute" type="checkbox"> Mute sound</label>
     <label for="sensitivity">Mouse sensitivity</label><span><input id="sensitivity" type="range" min="0.0005" max="0.01" step="0.0005"><output id="sensitivity-value" for="sensitivity"></output></span>
   </form><nav><button id="reset-settings">Reset to defaults</button><button id="settings-back">Back</button></nav></section>
-  <section id="pause-screen" hidden><div class="label">RUN PAUSED</div><h1>PAUSED</h1><nav><button id="resume">Resume</button><button id="pause-settings">Settings</button><button id="return-title">Return to title</button></nav></section>
+  <section id="pause-screen" hidden><div class="label">RUN PAUSED</div><h1>PAUSED</h1><nav><button id="resume">Resume</button><button id="pause-settings">Settings</button><button id="open-journal">Field Log [J]</button><button id="return-title">Return to title</button></nav></section>
+  <section id="journal-screen" hidden><div class="label">RECOVERED TRANSMISSIONS</div><h1>FIELD LOG</h1><div id="journal-entries"></div><nav><button id="journal-back">Back</button></nav></section>
   <section id="confirm-screen" hidden><div class="label">ACTIVE RUN</div><h1>ABANDON RUN?</h1><p>Returning to the title discards this attempt. Your session events will remain available for CSV export.</p><nav><button id="confirm-return">Return to title</button><button id="cancel-return">Keep playing</button></nav></section>
   <section id="briefing-screen" hidden><div class="label" id="sector"></div><h1 id="title"></h1><p id="message"></p><nav><button id="begin-mission">Deploy</button></nav></section>
   <section id="result-screen" hidden><div class="label" id="result-sector"></div><h1 id="result-title"></h1><p id="result-message"></p><dl id="results" hidden>
@@ -65,10 +69,11 @@ body{background:#101311;color:#dddcc9} header strong{letter-spacing:.25em;color:
 </section></div>
 </div>
 <div id="hud" hidden><span id="health"></span><span id="ammo"></span><span id="bots"></span><span id="objective"></span><span id="clock"></span></div>
-<footer><span id="play-controls" hidden>WASD or ↑ ↓ move · Mouse or ← → aim · Click or Space fire · R reload · E use · P pause</span><button id="export" disabled>Export session CSV</button></footer>
+<footer><span id="play-controls" hidden>WASD or ↑ ↓ move · Mouse or ← → aim · Click or Space fire · R reload · E use · J field log · P pause</span><button id="export" disabled>Export session CSV</button></footer>
 </main>
 <script src="bunker-art.js"></script>
 <script src="audio.js"></script>
+<script src="bunker-systems.js"></script>
 <script src="breach-mission.js"></script>
 <script src="blackout-mission.js"></script>
 <script>
@@ -86,13 +91,13 @@ const controlRoomMap = [
   '#........####',
   '#.######.####',
   '#........####',
-  '#.....#######',
+  '#.....#..####',
   '#############'
 ];
 const controlRoomMission = {
   id:'control-room',
   title:'CONTROL ROOM',
-  briefing:'Choose the guarded direct corridor or the maintenance route. Disable the alarm for a stealth extraction.',
+  briefing:'Choose the guarded direct corridor or the maintenance route. Disable the alarm for a stealth extraction. Route maintenance power to blind the camera, or overload a terminal to stun pursuers. Optional archive intel raises the stakes.',
   map:controlRoomMap,
   player:{x:1.5,y:8.5,angle:0},
   bots:[{id:'guard_1',x:4.5,y:5.5,hp:2,guard:true}],
@@ -116,6 +121,35 @@ let powerRestored, settingsReturnScreen = 'title-screen', tutorialSteps = [], tu
 const PREFERENCE_KEY = 'bunker-07-preferences-v1';
 const TUTORIAL_KEY = 'bunker-07-breach-tutorial-seen';
 const DEFAULT_PREFERENCES = {volume:0.65,muted:false,sensitivity:0.003};
+
+// Feedback uses world-space sprites so sparks obey the same wall clipping as actors.
+let impactEffects=[], damageDirection=null, radioText='', radioTimer=0;
+let systems=null;
+function announce(text) {radioText=text;radioTimer=7;$('radio').textContent=text;}
+function spatialSound(kind,x,y) {
+ const rx=x-player.x,ry=y-player.y,d=Math.hypot(rx,ry);
+ const pan=d ? (ry*Math.cos(player.angle)-rx*Math.sin(player.angle))/d : 0;
+ window.Bunker07Audio?.positional?.(kind,pan,d);
+}
+function impact(x,y,kind='spark') {
+ impactEffects.push({x,y,kind:'effect',asset:kind,ttl:.22,scale:.17});
+ if(impactEffects.length>24)impactEffects.shift();
+ spatialSound('impact',x,y);
+}
+function damagePlayer(amount,x,y) {
+ if(mode!=='play')return;
+ player.hp=Math.max(0,player.hp-amount);hurt=.22;
+ damageDirection={angle:Math.atan2(y-player.y,x-player.x),ttl:.8};
+ spatialSound('damage',x,y);log('damage','',String(amount));
+ if(!player.hp)finish(false);
+}
+function openJournal() {
+ if(mode!=='play'&&mode!=='pause')return;
+ if(mode==='play')pause();
+ const entries=systems?.entries?.()||['No archive transmissions recovered. Explore consoles and maintenance spaces.'];
+ $('journal-entries').replaceChildren(...entries.map(text=>{const p=document.createElement('p');p.textContent=text;return p;}));
+ showScreen('journal-screen');
+}
 
 function readStoredValue(key) {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -164,6 +198,7 @@ function showScreen(screenId) {
   $('hud').hidden = true;
   $('play-controls').hidden = true;
   $('tutorial').hidden = true;
+  $('radio').hidden = true;
   keys.clear();
   lastMouseX = null;
   if (document.pointerLockElement === canvas) document.exitPointerLock();
@@ -217,12 +252,15 @@ function reset() {
   firstRoute = ''; alertProgress = 0;
   alarmTriggered = alarmActive = panelDisabled = reinforcementSpawned = coreCollected = false;
   powerRestored = false;
+  impactEffects=[];damageDirection=null;radioTimer=0;radioText='';
+  systems?.reset();
 }
 function log(event, target = '', detail = '') {
   events.push([run,time.toFixed(2),event,target,player.hp,player.ammo,shots,hits,detail,mission.id]);
   $('export').disabled = false;
 }
 function wall(x,y) {
+  if(systems?.isWall(x,y))return true;
   if (mission.objective.type === 'alarm_core' && !coreCollected
     && Math.floor(y) === 4 && Math.floor(x) >= 8 && Math.floor(x) <= 10) return true;
   return (map[Math.floor(y)]?.[Math.floor(x)] ?? '#') === '#';
@@ -261,6 +299,8 @@ function triggerAlarm() {
   if (mission.objective.type !== 'alarm_core' || alarmTriggered || panelDisabled) return;
   alarmTriggered = alarmActive = true;
   log('alarm_triggered','guard_1');
+  announce('SECURITY ALERT / Reinforcements inbound. Use cover or a terminal overload.');
+  spatialSound('alarm',player.x,player.y);
   if (!reinforcementSpawned) {
     reinforcementSpawned = true;
     enemies.push({x:7.5,y:7.5,id:'reinforcement_1',hp:2,attack:0.8,attackWindup:0});
@@ -268,9 +308,11 @@ function triggerAlarm() {
   }
 }
 function usePanel() {
+  if(mode==='play' && systems?.interact()){spatialSound('use',player.x,player.y);return;}
   if (mode !== 'play' || panelDisabled || !panel
     || Math.hypot(player.x-panel.x,player.y-panel.y) > USE_RADIUS) return;
   panelDisabled = true;
+  spatialSound('use',panel.x,panel.y);
   if (mission.objective.type === 'alarm_core') {
     alarmActive = false;
     log('alarm_disabled','alarm_panel_1',alarmTriggered ? 'silenced' : 'prevented');
@@ -294,13 +336,24 @@ function shoot() {
       nearest = forward; target = bot;
     }
   }
-  hitMarker = target ? 0.24 : 0;
+  const wallHit=ray(player.x,player.y,dx,dy).dist;
+  const deviceHit=systems?.shoot(dx,dy,wallHit,nearest)||false;
+  if(deviceHit) {target=null;hits++;}
+  else if(target) {
+    target.stagger=target.role==='armored'?.12:.38;target.attackWindup=0;
+    impact(target.x,target.y);
+  } else impact(player.x+dx*Math.max(.05,wallHit-.03),player.y+dy*Math.max(.05,wallHit-.03));
+  systems?.noise(player.x,player.y);
+  hitMarker = target||deviceHit ? 0.24 : 0;
   if (target) {
     target.hp--; hits++;
     window.Bunker07Audio?.hit?.();
   }
   log('shot',target ? enemies.indexOf(target)+1 : '');
-  if (target?.hp === 0) log('bot_disabled',enemies.indexOf(target)+1);
+  if (target?.hp === 0) {
+    log('bot_disabled',enemies.indexOf(target)+1);
+    impactEffects.push({x:target.x,y:target.y,kind:'effect',asset:'smoke',ttl:.7,scale:.4});
+  }
 }
 function pause() {
   if (mode !== 'play') return;
@@ -310,9 +363,9 @@ function pause() {
 function campaignSummary() {
   const rows = missions.map(item => {
     const stats = campaignStats[item.id];
-    return `<tr><td>${item.title}</td><td>${stats.clear ? `${stats.clear.time.toFixed(1)} s` : '—'}</td><td>${stats.clear ? `${stats.clear.accuracy}%` : '—'}</td><td>${stats.retries}</td></tr>`;
+    return `<tr><td>${item.title}</td><td>${stats.clear ? `${stats.clear.time.toFixed(1)} s` : '—'}</td><td>${stats.clear ? `${stats.clear.accuracy}%` : '—'}</td><td>${stats.retries}</td><td>${stats.clear?.assessment||'—'}</td></tr>`;
   });
-  $('campaign-summary').innerHTML = `<table><thead><tr><th>Mission</th><th>Clear time</th><th>Accuracy</th><th>Retries</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  $('campaign-summary').innerHTML = `<table><thead><tr><th>Mission</th><th>Clear time</th><th>Accuracy</th><th>Retries</th><th>Assessment</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
   $('campaign-summary').hidden = false;
 }
 function finish(won) {
@@ -326,7 +379,8 @@ function finish(won) {
   reloadTimer = 0;
   for (const bot of enemies) bot.attackWindup = 0;
   const accuracy = shots ? Math.round(100*hits/shots) : 0;
-  if (won) campaignStats[mission.id].clear = {time,accuracy};
+  systems?.finish(won);
+  if (won) campaignStats[mission.id].clear = {time,accuracy,assessment:systems?.summary(won)||''};
   $('result-time').textContent = `${time.toFixed(1)} s`;
   $('result-accuracy').textContent = shots ? `${accuracy}% (${hits}/${shots})` : 'No shots';
   $('result-bots').textContent = `${enemies.length-remaining()}/${enemies.length}`;
@@ -354,6 +408,7 @@ function finish(won) {
     $('result-action').textContent = won ? 'Continue' : 'Retry Mission';
     $('result-action').dataset.action = won ? 'continue' : 'retry';
   }
+  $('result-message').textContent += ' '+(systems?.summary(won)||'');
   $('tutorial').hidden = true;
   showScreen('result-screen');
 }
@@ -380,6 +435,9 @@ function startMission() {
 }
 function update(dt) {
   time += dt;
+  radioTimer=Math.max(0,radioTimer-dt);
+  impactEffects=impactEffects.filter(e=>(e.ttl-=dt)>0);
+  if(damageDirection && (damageDirection.ttl-=dt)<=0)damageDirection=null;
   cooldown = Math.max(0,cooldown-dt);
   if (reloadTimer > 0) {
     reloadTimer = Math.max(0,reloadTimer-dt);
@@ -397,37 +455,39 @@ function update(dt) {
   move(player,(dx*forward-dy*strafe)*speed,(dy*forward+dx*strafe)*speed);
   if (forward || strafe) progressTutorial('move');
   chooseRoute();
+  for(const bot of enemies)bot.moving=false;
+  systems?.update(dt);
+  if(mode!=='play')return;
   for (const bot of enemies) {
-    bot.moving=false;
     if (bot.hp <= 0) continue;
-    let x = player.x-bot.x, y = player.y-bot.y, distance = Math.hypot(x,y);
-    let visible = distance > 0 && distance <= 7
-      && ray(bot.x,bot.y,x/distance,y/distance).dist >= distance;
-    if (bot.attackWindup > 0) {
-      if (!visible || distance >= 1.15) {
-        bot.attackWindup = 0;
-        continue;
-      }
-      bot.attackWindup = Math.max(0,bot.attackWindup-dt);
-      if (bot.attackWindup > 0) continue;
-      player.hp = Math.max(0,player.hp-12);
-      hurt = 0.22;
-      log('damage',enemies.indexOf(bot)+1);
-      if (!player.hp) { finish(false); return; }
+    bot.stagger=Math.max(0,(bot.stagger||0)-dt);
+    if(bot.stagger>0){bot.attackWindup=0;continue;}
+    const range=bot.attackRange||1.15;
+    let x=player.x-bot.x,y=player.y-bot.y,distance=Math.hypot(x,y);
+    let visible=distance>0&&distance<=7&&ray(bot.x,bot.y,x/distance,y/distance).dist>=distance;
+    if(bot.attackWindup>0) {
+      if(!visible||distance>=range){bot.attackWindup=0;continue;}
+      bot.attackWindup=Math.max(0,bot.attackWindup-dt);
+      if(bot.attackWindup>0)continue;
+      damagePlayer(bot.damage||12,bot.x,bot.y);
+      if(mode!=='play')return;
       continue;
     }
-    if (distance <= 7 && visible && distance > 0.8 && (!bot.guard || alarmTriggered)) {
+    if(visible&&distance>.8&&bot.role!=='turret'&&(!bot.guard||alarmTriggered)) {
       const oldX=bot.x,oldY=bot.y;
-      move(bot,x/distance*0.85*dt,y/distance*0.85*dt);
+      move(bot,x/distance*(bot.speed??.85)*dt,y/distance*(bot.speed??.85)*dt);
       bot.moving=Math.hypot(bot.x-oldX,bot.y-oldY)>.0001;
-      x = player.x-bot.x; y = player.y-bot.y; distance = Math.hypot(x,y);
-      visible = distance > 0 && distance <= 7
-        && ray(bot.x,bot.y,x/distance,y/distance).dist >= distance;
+      bot.facing=Math.atan2(y,x);
+      x=player.x-bot.x;y=player.y-bot.y;distance=Math.hypot(x,y);
+      visible=distance>0&&distance<=7&&ray(bot.x,bot.y,x/distance,y/distance).dist>=distance;
     }
-    bot.attack = Math.max(0,bot.attack-dt);
-    if (visible && distance < 1.15 && bot.attack === 0 && (!bot.guard || alarmTriggered)) {
-      bot.attack = 1.0;
-      bot.attackWindup = ATTACK_WINDUP;
+    bot.soundTimer=Math.max(0,(bot.soundTimer||0)-dt);
+    if(bot.moving&&bot.soundTimer===0&&distance<6){spatialSound('step',bot.x,bot.y);bot.soundTimer=.65;}
+    bot.attack=Math.max(0,bot.attack-dt);
+    if(visible&&distance<range&&bot.attack===0&&(!bot.guard||alarmTriggered)) {
+      bot.attack=bot.role==='turret'?1.5:1;
+      bot.attackWindup=bot.role==='scout'?.55:ATTACK_WINDUP;
+      spatialSound('attack',bot.x,bot.y);
     }
   }
   if (mission.objective.type === 'alarm_core') {
@@ -435,6 +495,7 @@ function update(dt) {
     if (!alarmTriggered && !panelDisabled && guard) {
       const x = player.x-guard.x, y = player.y-guard.y, distance = Math.hypot(x,y);
       const visible = distance > 0 && distance <= 7
+        && (x*Math.cos(guard.facing??Math.PI)+y*Math.sin(guard.facing??Math.PI))/distance>.55
         && ray(guard.x,guard.y,x/distance,y/distance).dist >= distance;
       alertProgress = visible ? alertProgress+dt : 0;
       if (alertProgress >= ALARM_DETECT_TIME) triggerAlarm();
@@ -478,20 +539,38 @@ function drawSurfaces(dx,dy,blackout) {
    surfacePixels={};
    for(const name of ['floor','ceiling'])surfacePixels[name]=window.Bunker07Art.textures[name].getContext('2d').getImageData(0,0,64,64).data;
  }
- const data=surfaceBuffer.data;
- for(let y=0;y<H;y++) {
-   const floor=y>=H/2, p=Math.abs(y+.5-H/2), distance=H*.5/p;
-   const tex=surfacePixels[floor?'floor':'ceiling'];
-   for(let x=0;x<W;x++) {
-     const plane=(2*(x+.5)/W-1)*FOV;
-     const wx=player.x+distance*(dx-dy*plane),wy=player.y+distance*(dy+dx*plane);
+ const data=surfaceBuffer.data, floorTex=surfacePixels.floor, ceilingTex=surfacePixels.ceiling;
+ // Symmetric horizontal planes share world samples and lighting; advance world coordinates across each row.
+ for(let y=H/2;y<H;y++) {
+   const distance=H*.5/(y+.5-H/2),plane0=(-1+1/W)*FOV;
+   let wx=player.x+distance*(dx-dy*plane0),wy=player.y+distance*(dy+dx*plane0);
+   const stepX=-distance*dy*2*FOV/W,stepY=distance*dx*2*FOV/W;
+   const ambient=(blackout?.7:.82)/(1+distance*.13);
+   for(let x=0;x<W;x++,wx+=stepX,wy+=stepY) {
      const tx=((Math.floor(wx*64)%64)+64)%64,ty=((Math.floor(wy*64)%64)+64)%64;
-     const src=(ty*64+tx)*4,dst=(y*W+x)*4;
-     const light=Math.max(.12,Math.min(.95,(blackout?.7:.82)/(1+distance*.13)+surfaceLight(wx,wy)*.18));
-     data[dst]=tex[src]*light;data[dst+1]=tex[src+1]*light;data[dst+2]=tex[src+2]*light;data[dst+3]=255;
+     const src=(ty*64+tx)*4,dst=(y*W+x)*4,above=((H-1-y)*W+x)*4;
+     const light=Math.max(.08,Math.min(.95,(ambient+surfaceLight(wx,wy)*.18)*(systems?.light(wx,wy)??1)));
+     data[dst]=floorTex[src]*light;data[dst+1]=floorTex[src+1]*light;data[dst+2]=floorTex[src+2]*light;data[dst+3]=255;
+     data[above]=ceilingTex[src]*light;data[above+1]=ceilingTex[src+1]*light;data[above+2]=ceilingTex[src+2]*light;data[above+3]=255;
    }
  }
+
  ctx.putImageData(surfaceBuffer,0,0);
+}
+
+// Test wall depth per column, then draw one clipped bitmap per billboard.
+// Grouping contiguous visible stripes preserves occlusion without thousands of drawImage calls.
+function drawBillboard(sprite,left,top,width,height,z) {
+ const first=Math.max(0,Math.floor(left)),last=Math.min(W,Math.ceil(left+width));
+ let run=-1,visible=false;
+ ctx.save();ctx.beginPath();
+ for(let col=first;col<=last;col++) {
+   const open=col<last&&z<depth[col];
+   if(open&&run<0)run=col;
+   if(!open&&run>=0){ctx.rect(run,0,col-run,H);run=-1;visible=true;}
+ }
+ if(visible){ctx.clip();ctx.drawImage(sprite,left,top,width,height);}
+ ctx.restore();
 }
 
 function render() {
@@ -504,12 +583,12 @@ function render() {
     const {dist,side,edge,mx,my} = ray(player.x,player.y,dx-dy*plane,dy+dx*plane);
     depth[column] = dist;
     const height = H/Math.max(0.01,dist), top = (H-height)/2;
-    const texture = art.textures[(mx+my)%5===0 ? 'steel' : 'concrete'];
+    const texture = art.textures[systems?.isWall(mx,my)||(mx+my)%5===0 ? 'steel' : 'concrete'];
     let u = Math.floor(edge*64);
     if ((!side && dx>0) || (side && dy<0)) u=63-u;
     ctx.drawImage(texture,u,0,1,64,column,top,1,height);
     const light = surfaceLight(player.x+(dx-dy*plane)*dist,player.y+(dy+dx*plane)*dist);
-    ctx.fillStyle = `rgba(4,8,9,${Math.max(0,Math.min(.86, .12+dist*.075+(side?.13:0)-light*.23))})`;
+    ctx.fillStyle = `rgba(4,8,9,${Math.max(0,Math.min(.86, .12+dist*.075+(side?.13:0)-light*.23+(1-(systems?.light(player.x+(dx-dy*plane)*dist,player.y+(dy+dx*plane)*dist)??1))*.5))})`;
     ctx.fillRect(column,top,1,height);
     if(mission.id==='control-room') {
       const wx=player.x+(dx-dy*plane)*dist,wy=player.y+(dy+dx*plane)*dist;
@@ -523,6 +602,8 @@ function render() {
     : mission.objective.type === 'alarm_core' ? coreCollected : powerRestored;
   const objects = [
     ...(mission.id === 'control-room' ? roomProps : []),
+    ...(systems?.objects()||[]),
+    ...impactEffects,
     ...enemies.filter(bot => bot.hp>0).map(bot => ({...bot,kind:'bot'})),
     ...(mission.objective.type === 'alarm_core' ? [
       {x:2.5,y:5.5,kind:'sign',label:'DIRECT',color:'#b54b3e'},
@@ -544,19 +625,16 @@ function render() {
   }).filter(object => object.z>0.15).sort((a,b) => b.z-a.z);
   for (const object of objects) {
     const center = W/2*(1+object.side/(FOV*object.z)), size = H/object.z;
-    if (object.kind === 'prop' || object.kind === 'bot') {
+    if (object.kind === 'prop' || object.kind === 'bot' || object.kind==='effect') {
       const attacking=object.attackWindup>0;
       const walking=object.kind==='bot' && object.moving && mode==='play';
-      const state=attacking?'attack':walking?'walk':'idle';
-      const frames=art.bots[state];
-      const sprite=object.kind==='prop'?art.props[object.asset]:frames[Math.floor(time*(attacking?10:walking?7:2))%frames.length];
+      const state=object.stagger>0?'stagger':attacking?'attack':walking?'walk':'idle';
+      const frames=(art.roles?.[object.role||'standard']||art.bots)[state]||art.bots.idle;
+      const sprite=object.kind==='effect'?art.effects?.[object.asset]:object.kind==='prop'?art.props[object.asset]:frames[Math.floor(time*(attacking?10:walking?7:2))%frames.length];
+      if(!sprite)continue;
       const scale=object.scale || .78, height=size*scale, width=height;
-      const left=center-width/2, top=H/2+size*.5-height;
-      for(let col=Math.max(0,Math.floor(left));col<Math.min(W,left+width);col++) {
-        if(object.z>=depth[col]) continue;
-        const u=Math.min(63,Math.max(0,Math.floor((col-left)/width*64)));
-        ctx.drawImage(sprite,u,0,1,64,col,top,1,height);
-      }
+      const left=center-width/2, top=object.kind==='effect'?H/2-height/2:H/2+size*.5-height;
+      drawBillboard(sprite,left,top,width,height,object.z);
       continue;
     }
     if (object.kind === 'sign') {
@@ -567,10 +645,7 @@ function render() {
       signCtx.font='bold 11px monospace';signCtx.textAlign='center';signCtx.textBaseline='middle';
       signCtx.fillStyle='#e3e8cc';signCtx.fillText(object.label,sw/2,sh/2,sw-8);
       const width=Math.min(100,size*.7), height=width*sh/sw, left=center-width/2;
-      for(let col=Math.max(0,Math.floor(left));col<Math.min(W,left+width);col++) {
-        if(object.z>=depth[col])continue;
-        ctx.drawImage(signCanvas,Math.max(0,Math.floor((col-left)/width*sw)),0,1,sh,col,signY,1,height);
-      }
+      drawBillboard(signCanvas,left,signY,width,height,object.z);
       continue;
     }
     const width = size*(object.kind === 'beacon' ? 0.27 : object.kind === 'core' ? 0.22 : 0.48);
@@ -626,6 +701,12 @@ function render() {
     ctx.fillStyle = '#ffbf60'; ctx.fillRect(W/2-12,gunY-18,24,18);
     ctx.fillStyle = '#fff4ae'; ctx.fillRect(W/2-5,gunY-23,10,22);
   }
+  if(damageDirection) {
+    const angle=damageDirection.angle-player.angle;
+    const px=W/2+Math.sin(angle)*78,py=H/2-Math.cos(angle)*62;
+    ctx.save();ctx.translate(px,py);ctx.rotate(angle);
+    ctx.fillStyle='#ff774e';ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(-5,5);ctx.lineTo(5,5);ctx.closePath();ctx.fill();ctx.restore();
+  }
   if (hurt) {ctx.fillStyle = '#ed3b3b47'; ctx.fillRect(0,0,W,H);}
   ctx.fillStyle = '#e7fff2'; ctx.fillRect(W/2-5,H/2,11,1); ctx.fillRect(W/2,H/2-5,1,11);
   if (hitMarker > 0) {
@@ -669,6 +750,9 @@ function render() {
     $('objective').textContent = mission.title
       + (remaining() ? ' · DISABLE THE SECURITY BOT' : ' · REACH CONTROL SECTOR');
   }
+  const devicePrompt=systems?.prompt();
+  if(devicePrompt)$('objective').textContent+=' · '+devicePrompt;
+  $('radio').hidden=mode!=='play'||radioTimer<=0;
   $('clock').textContent = `${Math.floor(time)}s`;
 }
 function frame(now) {
@@ -684,6 +768,7 @@ function lockMouse() {
 $('start-campaign').onclick = () => {
   missionIndex = 0;
   campaignStats = createCampaignStats();
+  systems?.newCampaign();
   showBriefing();
 };
 $('open-controls').onclick = () => showScreen('controls-screen');
@@ -715,9 +800,12 @@ $('result-action').onclick = () => {
   } else if (action === 'new-campaign') {
     missionIndex = 0;
     campaignStats = createCampaignStats();
+    systems?.newCampaign();
     showBriefing();
   }
 };
+$('open-journal').onclick=openJournal;
+$('journal-back').onclick=()=>showScreen('pause-screen');
 $('return-title').onclick = () => showScreen('confirm-screen');
 $('confirm-return').onclick = () => {
   log('mission_abandoned');
@@ -790,6 +878,7 @@ window.addEventListener('keydown', event => {
   if (code === 'ArrowLeft' || code === 'ArrowRight') progressTutorial('aim');
   if (code === 'Space') shoot();
   if (code === 'KeyE') usePanel();
+  if (code === 'KeyJ')openJournal();
   if (code === 'KeyR' && player.ammo < 8 && reloadTimer === 0) {
     reloadTimer = RELOAD_DURATION;
     progressTutorial('reload');
@@ -816,6 +905,10 @@ $('result-export').onclick = exportSession;
 preferences = loadPreferences();
 syncSettingsUI();
 applyAudioPreferences();
+systems=window.Bunker07Systems.create({
+ state:()=>({mission,player,enemies,map,mode,time,alarmTriggered,alarmActive,panelDisabled,coreCollected,powerRestored,firstRoute,shots,hits}),
+ ray,move,log,triggerAlarm,damage:damagePlayer,message:announce,sound:spatialSound,impact
+});
 reset();
 showTitle();
 requestAnimationFrame(frame);

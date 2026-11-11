@@ -1,0 +1,224 @@
+{
+  "checks": [
+    {
+      "name": "reactive systems module loads",
+      "ok": true
+    },
+    {
+      "name": "control room starts without optional rewards",
+      "ok": true
+    },
+    {
+      "name": "control guard has armored role",
+      "ok": true
+    },
+    {
+      "name": "unalerted guard patrols",
+      "ok": true
+    },
+    {
+      "name": "camera detects exposed player",
+      "ok": true
+    },
+    {
+      "name": "camera cannot detect through separating wall",
+      "ok": true
+    },
+    {
+      "name": "power terminal is interactable",
+      "ok": true
+    },
+    {
+      "name": "routing power disables camera and dims room",
+      "ok": true
+    },
+    {
+      "name": "disabled camera cannot raise alarm",
+      "ok": true
+    },
+    {
+      "name": "camera shot intercepts before wall",
+      "ok": true
+    },
+    {
+      "name": "camera shot disables camera",
+      "ok": true
+    },
+    {
+      "name": "device hits reward accuracy and hit feedback",
+      "ok": true
+    },
+    {
+      "name": "nearer enemy occludes camera shot",
+      "ok": true
+    },
+    {
+      "name": "wall occludes device shot",
+      "ok": true
+    },
+    {
+      "name": "lamp can be shot",
+      "ok": true
+    },
+    {
+      "name": "door switch toggles",
+      "ok": true
+    },
+    {
+      "name": "closed door blocks collision and rays",
+      "ok": true
+    },
+    {
+      "name": "door reopens without permanent trap",
+      "ok": true
+    },
+    {
+      "name": "door refuses close on living actor",
+      "ok": true
+    },
+    {
+      "name": "terminal overload interaction",
+      "ok": true
+    },
+    {
+      "name": "overload staggers nearby visible enemies and cancels attack",
+      "ok": true
+    },
+    {
+      "name": "optional intel can be recovered",
+      "ok": true
+    },
+    {
+      "name": "intel exposes player to alarm risk",
+      "ok": true
+    },
+    {
+      "name": "secret cache gives one-time reward",
+      "ok": true
+    },
+    {
+      "name": "successful stealth commits campaign decisions",
+      "ok": true
+    },
+    {
+      "name": "security shutdown disables later turret",
+      "ok": true
+    },
+    {
+      "name": "failed retry preserves committed decisions",
+      "ok": true
+    },
+    {
+      "name": "alarm consequence adds later armored opposition",
+      "ok": true
+    },
+    {
+      "name": "new campaign clears prior decisions",
+      "ok": true
+    },
+    {
+      "name": "baseline turret is stationary ranged role",
+      "ok": true
+    },
+    {
+      "name": "all encounter prop assets exist",
+      "ok": true
+    },
+    {
+      "name": "broken lamp asset exists",
+      "ok": true
+    },
+    {
+      "name": "gunfire starts last-heard investigation",
+      "ok": true
+    },
+    {
+      "name": "investigating guard moves along route",
+      "ok": true
+    },
+    {
+      "name": "hits damage and stagger armored enemy",
+      "ok": true
+    },
+    {
+      "name": "impacts produce wall-clipped feedback sprites",
+      "ok": true
+    },
+    {
+      "name": "turret attacks at range without moving",
+      "ok": true
+    },
+    {
+      "name": "damage records attacker direction",
+      "ok": true
+    },
+    {
+      "name": "ranged windup cancels behind walls",
+      "ok": true,
+      "detail": {
+        "hp": 100,
+        "windup": 0,
+        "roles": [
+          "turret"
+        ]
+      }
+    },
+    {
+      "name": "rank rewards fast accurate optional stealth run",
+      "ok": true
+    },
+    {
+      "name": "summary exposes rank and optional rewards",
+      "ok": true
+    },
+    {
+      "name": "story log contains durable field entries",
+      "ok": true
+    },
+    {
+      "name": "retry resets devices and provisional rewards",
+      "ok": true
+    },
+    {
+      "name": "grouped billboard clips nearer wall stripe without hiding visible stripe",
+      "ok": true
+    },
+    {
+      "name": "billboard clipping does not leak into following drawing",
+      "ok": true
+    },
+    {
+      "name": "new visuals render breach",
+      "ok": true
+    },
+    {
+      "name": "new visuals render control-room",
+      "ok": true
+    },
+    {
+      "name": "new visuals render blackout",
+      "ok": true
+    },
+    {
+      "name": "full optional maintenance route traverses to extraction",
+      "ok": true
+    },
+    {
+      "name": "optional route reports S rank",
+      "ok": true
+    },
+    {
+      "name": "direct alarm route remains traversable",
+      "ok": true
+    },
+    {
+      "name": "J opens field journal and pauses gameplay",
+      "ok": true
+    },
+    {
+      "name": "journal round trip restores playable HUD",
+      "ok": true
+    }
+  ],
+  "errors": []
+}

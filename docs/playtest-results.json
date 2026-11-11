@@ -41,7 +41,7 @@
       "ok": true
     },
     {
-      "name": "bot hit and killed",
+      "name": "armored bot takes three hits and is killed",
       "ok": true
     },
     {
@@ -49,7 +49,7 @@
       "ok": true
     },
     {
-      "name": "attack damage",
+      "name": "armored attack damage",
       "ok": true
     },
     {
@@ -166,5 +166,5 @@
     }
   ],
   "errors": [],
-  "averageRenderMs": 7.97666666607062
+  "averageRenderMs": 5.006666666269302
 }
