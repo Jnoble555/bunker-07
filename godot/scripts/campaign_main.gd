@@ -466,6 +466,10 @@ func export_csv(path: String="") -> String:
 		return ""
 	file.store_string(session.csv_text(events))
 	file.close()
+	if OS.has_feature("web"):
+		JavaScriptBridge.download_buffer(session.csv_text(events).to_utf8_buffer(),"bunker-07-session.csv","text/csv")
+		announce("Session CSV downloaded")
+		return "bunker-07-session.csv"
 	var absolute := ProjectSettings.globalize_path(destination)
 	announce("CSV exported: "+absolute)
 	if menu_text and menu.visible: menu_text.text += "\n\nCSV saved: "+absolute
@@ -556,8 +560,9 @@ func _reset_settings() -> void:
 func _build_campaign_ui() -> void:
 	var column: VBoxContainer = menu_title.get_parent()
 	deploy_button.text = "Deploy"
-	campaign_button = _button(column,"Start Campaign",new_campaign)
+	campaign_button = _button(column,"Original campaign (3 missions)",new_campaign)
 	operation_button = _button(column,"Deep Signal / Tactical Operation",new_operation)
+	column.move_child(operation_button,column.get_children().find(campaign_button))
 	continue_button = _button(column,"Continue",advance_campaign)
 	settings_button = _button(column,"Settings",open_settings)
 	journal_button = _button(column,"Field Log [J]",open_journal)

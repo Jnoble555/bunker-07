@@ -1,5 +1,7 @@
 # Bunker 07
 
+**[Play the updated 3D game](https://jnoble555.github.io/bunker-07/)** — choose Deep Signal / Tactical Operation. The [original JavaScript edition](https://jnoble555.github.io/bunker-07/classic.html) remains available. Pages now builds the Godot project automatically; see [web release details](docs/godot/web-release.md).
+
 A **three-mission Godot campaign preview** is available in [`godot/`](godot/README.md), including reactive security, tactical devices, optional objectives and campaign consequences. The browser version below remains the behavioral reference. See [native parity and limits](docs/godot/parity.md) and [release verification](docs/godot/campaign-release.md).
 
 ### [▶ Play Bunker 07 in your browser](https://jnoble555.github.io/bunker-07/)
