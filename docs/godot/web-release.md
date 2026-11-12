@@ -10,7 +10,7 @@ Requires a desktop browser with WebGL 2. First load downloads the approximately 
 
 ## Rebuild and publish
 
-`.github/workflows/pages.yml` pins Godot 4.6.3, installs the official export template, exports the current project, stages the classic game and deploys a Pages artifact. A push to main triggers publishing; generated WASM is not committed to Git. `build-info.json` in the published site records the exact source commit and edition. GitHub Pages uses Actions publishing rather than the earlier source-branch build.
+`.github/workflows/pages.yml` pins Godot 4.6.3, installs the official export template, exports the current project, stages the classic game and deploys a Pages artifact. A push to main triggers publishing; generated WASM is not committed to Git. `build-info.json` in the published site records the exact source commit and edition. Set Settings → Pages → Build and deployment → Source to **GitHub Actions** once. GitHub restricts changing that repository setting through the workflow token; the deployment job itself only publishes the built artifact.
 
 Local build with Godot 4.6.3 and its web export template installed:
 
