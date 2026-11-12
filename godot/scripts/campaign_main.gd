@@ -1,4 +1,10 @@
 extends "res://scripts/main.gd"
+const OperationData = preload("res://scripts/tactical_operation_data.gd")
+const OperationRoom = preload("res://scripts/tactical_operation_room.gd")
+const TacticalEnemy = preload("res://scripts/tactical_enemy.gd")
+var operation_mode := false
+var operation_stage := 0
+var operation_button: Button
 const WeaponDefs = preload("res://scripts/weapon_definitions.gd")
 var weapon_id := "pistol"
 var weapon_ammo: Dictionary = {}
@@ -30,7 +36,7 @@ var damage_direction: String = ""
 var tutorial_index: int = 0
 var tutorial_active: bool = false
 var tutorial_text: Label
-var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift sprint / Q,C lean / RMB aim / E pickups / 1,2 weapons","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
+var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift sprint / Q,C lean / RMB aim / E pickups / 1,2,3 weapons","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
 var campaign_button: Button
 var continue_button: Button
 var settings_button: Button
@@ -92,7 +98,7 @@ func _load_mission() -> void:
 	enemies.clear()
 	guard = null
 	if is_instance_valid(room): room.free()
-	room = RoomScript.new()
+	room = OperationRoom.new() if operation_mode else RoomScript.new()
 	room.name = "World"
 	room.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(room)
@@ -105,7 +111,7 @@ func _load_mission() -> void:
 		spawn_enemy({"id":"pursuit-armor","position":Vector3(15,0,9),"role":"armored","hp":3,"is_guard":false})
 
 func spawn_enemy(spec: Dictionary) -> CharacterBody3D:
-	var enemy = GuardScript.new()
+	var enemy = TacticalEnemy.new() if operation_mode else GuardScript.new()
 	add_child(enemy)
 	enemy.setup(self,spec.position,spec)
 	enemies.append(enemy)
@@ -114,6 +120,11 @@ func spawn_enemy(spec: Dictionary) -> CharacterBody3D:
 
 func _install_inputs() -> void:
 	super._install_inputs()
+	if not InputMap.has_action("weapon_3"):
+		InputMap.add_action("weapon_3")
+		var slot := InputEventKey.new()
+		slot.physical_keycode = KEY_3
+		InputMap.action_add_event("weapon_3",slot)
 	if not InputMap.has_action("journal"):
 		InputMap.add_action("journal")
 		var event := InputEventKey.new()
@@ -134,13 +145,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		retry_run()
 		return
 	if not active or get_tree().paused: return
-	for action in ["fire","reload","interact"]:
+	for action in ["fire","reload","interact","weapon_1","weapon_2","weapon_3"]:
 		if event.is_action_pressed(action):
 			if action=="fire": Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			request_action(action)
 			get_viewport().set_input_as_handled()
 
+func new_operation() -> void:
+	operation_mode = true
+	missions = [OperationData.definition()]
+	mission_index = 0
+	operation_stage = 0
+	session.retries["tactical-operation"] = 0
+	show_briefing()
+
 func new_campaign() -> void:
+	operation_mode = false
+	missions = MissionData.all_missions()
 	session.new_campaign()
 	mission_index = 0
 	show_briefing()
@@ -150,14 +171,17 @@ func show_briefing() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var definition: Dictionary = missions[mission_index]
-	_show_menu("briefing",definition.title,"MISSION %d OF 3\n\n%s" % [mission_index+1,definition.briefing])
+	_show_menu("briefing",definition.title,"%s\n\n%s" % ["STANDALONE TACTICAL OPERATION" if operation_mode else "MISSION %d OF %d" % [mission_index+1,missions.size()],definition.briefing])
 
 func deploy_current() -> void:
 	start_run()
 
 func advance_campaign() -> void:
 	if not last_won: return
-	if mission_index<2:
+	if operation_mode:
+		show_title()
+		return
+	if mission_index<missions.size()-1:
 		mission_index += 1
 		show_briefing()
 	else: new_campaign()
@@ -183,6 +207,7 @@ func start_run() -> void:
 	core_collected = false
 	power_restored = false
 	reinforcement_spawned = false
+	operation_stage = 0
 	first_route = ""
 	message_left = 0
 	session.begin_attempt()
@@ -213,7 +238,7 @@ func show_title() -> void:
 	get_tree().paused = false
 	pending_actions.clear()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_show_menu("title","BUNKER 07","NATIVE THREE-MISSION CAMPAIGN\n\nBreach security, secure Control Room and restore Blackout extraction power.\nThe browser remains the behavioral reference for this port.")
+	_show_menu("title","BUNKER 07","DEEP SIGNAL / TACTICAL PvE OPERATION\nArmed patrols, alternate approaches and an elevated archive.\n\nThe original three-mission campaign is also available.")
 
 func set_paused(value: bool) -> void:
 	if value and player: player.clear_held_inputs()
@@ -247,6 +272,7 @@ func _physics_process(delta: float) -> void:
 			"interact": interact()
 			"weapon_1": switch_weapon("pistol")
 			"weapon_2": switch_weapon("smg")
+			"weapon_3": switch_weapon("shotgun")
 	if get_weapon_def().automatic and Input.is_action_pressed("fire"): shoot()
 	systems.update(delta)
 	if not active: return
@@ -261,6 +287,10 @@ func _physics_process(delta: float) -> void:
 			room.set_gate(false)
 			room.set_core_collected(true)
 			register_event("core_collected","data_core_1")
+	if operation_mode:
+		if operation_stage==2 and player.global_position.distance_to(mission.exit)<1.5: finish(true)
+		_update_hud()
+		return
 	var unlocked: bool = core_collected if mission.id=="control-room" else power_restored if mission.id=="blackout" else remaining()==0
 	if unlocked and planar_distance(player.global_position,mission.exit)<1.2: finish(true)
 	_update_hud()
@@ -276,42 +306,56 @@ func shoot() -> void:
 	progress_tutorial("fire")
 	play_sound(get_weapon_def().sound,player.global_position)
 	var origin: Vector3 = player.camera.global_position
-	var direction: Vector3 = -player.camera.global_basis.z
-	var spread: float = get_weapon_def().spread * (0.5 if player.aiming else 1.0)
-	if spread > 0:
-		direction = (direction + player.camera.global_basis.x * randf_range(-spread,spread) + player.camera.global_basis.y * randf_range(-spread,spread)).normalized()
-	var shot_range: float = get_weapon_def().range
+	var hit_target := ""
+	var blast_hit := false
+	var definition := get_weapon_def()
+	for pellet in int(definition.get("pellets",1)):
+		var direction: Vector3 = -player.camera.global_basis.z
+		var spread: float = definition.spread * (0.5 if player.aiming else 1.0)
+		if spread > 0:
+			direction = (direction + player.camera.global_basis.x * randf_range(-spread,spread) + player.camera.global_basis.y * randf_range(-spread,spread)).normalized()
+		var target := _fire_ray(origin,direction,float(definition.range),int(definition.damage))
+		if target!="":
+			blast_hit = true
+			hit_target = target
+	if blast_hit:
+		hits += 1
+		hit_feedback = .24
+	# Damage callbacks observe the current counters after each ray; shot rows are blast-level.
+	systems.on_shot()
+	for enemy in enemies:
+		if enemy.has_method("hear_shot"): enemy.hear_shot(origin)
+	register_event("shot",weapon_id if weapon_id=="shotgun" else "",hit_target if hit_target not in ["camera","lamp"] else "")
+
+func _fire_ray(origin: Vector3, direction: Vector3, shot_range: float, damage: int) -> String:
 	var query := PhysicsRayQueryParameters3D.create(origin,origin+direction*shot_range,1|4|8,[player.get_rid()])
 	query.collide_with_areas = true
 	query.hit_from_inside = true
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if not hit.is_empty(): _impact(hit.position)
-	var wall_hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+direction*shot_range,1))
-	var wall_depth: float = origin.distance_to(wall_hit.position) if not wall_hit.is_empty() else shot_range
-	var target_id := ""
-	if not hit.is_empty():
-		var object: Node3D = hit.collider
-		var center: Vector3 = object.get_meta("target_center",object.global_position)
-		if object is Area3D and object.has_method("receive_hit"): center = object.get_parent().global_position
-		var depth: float = (center-origin).dot(direction)
-		# A pitched ray hits the nearest surface, not the actor's floor anchor.
-		# Retain the behind-camera rejection only for an overlapping hit area.
-		var surface_depth: float = origin.distance_to(hit.position)
-		if surface_depth <= wall_depth + 0.001 and (surface_depth > 0.001 or depth > 0):
-			if object.has_meta("device_id"):
-				if systems.shootable_hit(str(object.get_meta("device_id"))): target_id = str(object.get_meta("device_id"))
-			elif object.has_method("receive_hit"):
-				hits += 1
-				hit_feedback = .24
-				object.receive_hit(int(get_weapon_def().damage))
-				var actor: Node = object.get_parent() if object is Area3D else object
-				target_id = str(enemies.find(actor)+1)
-		if target_id!="":
-			if object.has_meta("device_id"): hits += 1
-			hit_feedback = .24
-			play_sound("hit",center)
-	systems.on_shot()
-	register_event("shot","",target_id if target_id not in ["camera","lamp"] else "")
+	if hit.is_empty(): return ""
+	_impact(hit.position)
+	var object: Node3D = hit.collider
+	var wall := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+direction*shot_range,1))
+	var surface_depth: float = origin.distance_to(hit.position)
+	if not wall.is_empty() and surface_depth>origin.distance_to(wall.position)+.001: return ""
+	if object.has_method("receive_hit") and surface_depth<=.001:
+		var center: Vector3 = object.get_parent().global_position if object is Area3D else object.global_position
+		if (center-origin).dot(direction)<=0: return ""
+	if object.has_meta("device_id"):
+		var device: String = str(object.get_meta("device_id"))
+		if systems.shootable_hit(device): return device
+	elif object.has_method("receive_hit"):
+		# The physical nearest ray surface enforces cover for each pellet independently.
+		var actor: Node = object.get_parent() if object is Area3D else object
+		if actor.get("hp") != null and int(actor.get("hp"))<=0: return ""
+		# Count once before callbacks (bot_disabled analytics includes the hit).
+		var old_hits := hits
+		hits = mini(shots,hits+1)
+		object.receive_hit(damage)
+		hits = old_hits
+		play_sound("hit",hit.position)
+		return str(enemies.find(actor)+1)
+	return ""
 
 func begin_reload() -> void:
 	if active and not get_tree().paused and ammo<int(get_weapon_def().capacity) and int(weapon_ammo[weapon_id].reserve)>0 and reload_remaining==0:
@@ -323,6 +367,9 @@ func begin_reload() -> void:
 func interact() -> void:
 	if not active or get_tree().paused: return
 	if collect_pickup(): return
+	if operation_mode:
+		operation_interact()
+		return
 	if systems.interact():
 		play_sound("use",player.global_position)
 		return
@@ -384,15 +431,15 @@ func finish(won: bool) -> void:
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var accuracy: String = "%d%% (%d/%d)" % [roundi(float(hits)/shots*100),hits,shots] if shots else "No shots"
-	var text: String = "Active time: %.1fs · Accuracy: %s\nRetries: %d\n" % [elapsed,accuracy,session.retries[mission.id]]
+	var text: String = "Active time: %.1fs · Accuracy: %s\nRetries: %d\n" % [elapsed,accuracy,session.retries.get(mission.id,0)]
 	if won:
 		text += "RANK %s · %s\n" % [last_result.rank.grade,"CLEAN RUN" if last_result.rank.stealth else "COMBAT RUN"]
 		if mission.id=="control-room": text += "Intel: %s · Secret: %s\n" % [systems.intel,systems.secret]
-	if won and mission_index==2:
+	if won and not operation_mode and mission_index==missions.size()-1:
 		for id in ["breach","control-room","blackout"]:
 			var summary: Dictionary = session.summaries.get(id,{})
 			if not summary.is_empty(): text += "\n%s / %.1fs / Rank %s / %d retries" % [id.to_upper(),summary.time,summary.rank.grade,summary.retries]
-	_show_menu("summary" if won and mission_index==2 else "result","CAMPAIGN COMPLETE" if won and mission_index==2 else mission.title+" CLEAR" if won else "MISSION FAILED",text)
+	_show_menu("summary" if won and not operation_mode and mission_index==missions.size()-1 else "result","CAMPAIGN COMPLETE" if won and not operation_mode and mission_index==missions.size()-1 else mission.title+" CLEAR" if won else "MISSION FAILED",text)
 
 func _snapshot() -> Dictionary:
 	return {"panel_disabled":panel_disabled,"alarm_triggered":alarm_triggered,"intel":systems.intel,"secret":systems.secret,"elapsed":elapsed,"shots":shots,"hits":hits,"health":health}
@@ -489,7 +536,7 @@ func _abandon() -> void:
 	show_title()
 
 func _show_controls() -> void:
-	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Q,C: lean / RMB: aim / 1,2: weapons\nClick / Space: fire · R: reload · E: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
+	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Q,C: lean / RMB: aim / 1,2,3: weapons\nClick / Space: fire · R: reload · E: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
 
 func _save_settings() -> void:
 	session.preferences.volume = volume_slider.value
@@ -510,6 +557,7 @@ func _build_campaign_ui() -> void:
 	var column: VBoxContainer = menu_title.get_parent()
 	deploy_button.text = "Deploy"
 	campaign_button = _button(column,"Start Campaign",new_campaign)
+	operation_button = _button(column,"Deep Signal / Tactical Operation",new_operation)
 	continue_button = _button(column,"Continue",advance_campaign)
 	settings_button = _button(column,"Settings",open_settings)
 	journal_button = _button(column,"Field Log [J]",open_journal)
@@ -549,6 +597,8 @@ func _build_campaign_ui() -> void:
 	title_button.pressed.connect(_confirm_return)
 	tutorial_text = Label.new()
 	tutorial_text.position = Vector2(24,130)
+	tutorial_text.size = Vector2(1232,90)
+	tutorial_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tutorial_text.add_theme_color_override("font_color",Color("e5d7ae"))
 	hud.get_parent().add_child(tutorial_text)
 	# Long journals/results scroll instead of growing outside the viewport.
@@ -571,8 +621,9 @@ func _show_menu(state: String,title: String,text: String) -> void:
 	retry_button.visible = state=="pause" or (state=="result" and not last_won)
 	title_button.visible = state=="pause"
 	campaign_button.visible = state=="title"
+	operation_button.visible = state=="title"
 	continue_button.visible = (state=="result" and last_won) or state=="summary"
-	continue_button.text = "Start New Campaign" if state=="summary" else "Continue"
+	continue_button.text = "Return to title" if operation_mode else "Start New Campaign" if state=="summary" else "Continue"
 	settings_button.visible = state in ["title","pause"]
 	journal_button.visible = state=="pause"
 	controls_button.visible = state=="title"
@@ -588,10 +639,11 @@ func _update_hud() -> void:
 	hud.text = "BUNKER 07 / %s | HEALTH %d | %s %d/%d RESERVE %d | %.0fs" % [mission.get("title",""),health,get_weapon_def().name,ammo,get_weapon_def().capacity,weapon_ammo.get(weapon_id,{}).get("reserve",0),elapsed]
 	var objective := ""
 	match mission.get("id",""):
+		"tactical-operation": objective = operation_objective()
 		"breach": objective = "DISABLE SECURITY SCOUT" if remaining()>0 else "REACH CONTROL SECTOR"
 		"blackout": objective = "POWER RESTORED · REACH LIFT" if power_restored else "FIND BACKUP POWER / SOUTHWEST BAY"
 		_: objective = "CORE SECURED · EXTRACT" if core_collected else "DATA CORE REQUIRED · PANEL OR GUARD ALERT"
-	if mission.get("id","")!="breach" and planar_distance(player.global_position,mission.panel)<=1.7: objective += " | PANEL OFF" if panel_disabled else " | E · USE PANEL"
+	if not operation_mode and mission.get("id","")!="breach" and planar_distance(player.global_position,mission.panel)<=1.7: objective += " | PANEL OFF" if panel_disabled else " | E · USE PANEL"
 	var nearby_pickup := nearby_pickup()
 	var prompt: String = ("E / " + str(nearby_pickup.label)) if not nearby_pickup.is_empty() else (systems.prompt() if systems else "")
 	if prompt!="": objective += " | "+prompt
@@ -644,17 +696,18 @@ func make_pickups() -> void:
 		[Vector3(5,0,4),Vector3(6,0,4)],
 		[Vector3(5,0,17),Vector3(5,0,15)],
 		[Vector3(5,0,3),Vector3(3,0,5)]
-	][mission_index]
+	][0 if operation_mode else mission_index]
 	pickups = [
 		{"id":"smg","label":"PICK UP SMG / 2 TO EQUIP","position":locations[0],"taken":false},
 		{"id":"supply","label":"TAKE AMMUNITION","position":locations[1],"taken":false}
 	]
+	if operation_mode: pickups = OperationData.supplies()
 	for item: Dictionary in pickups:
 		var prop := Node3D.new()
 		prop.position = item.position + Vector3(0,0.75,0)
 		pickup_nodes.add_child(prop)
-		if item.id == "smg":
-			var model: Node3D = load("res://assets/weapons/security_smg.glb").instantiate()
+		if item.id in ["smg","shotgun"]:
+			var model: Node3D = load("res://assets/weapons/security_"+str(item.id)+".glb").instantiate()
 			model.scale = Vector3.ONE * 0.8
 			prop.add_child(model)
 		else:
@@ -667,7 +720,7 @@ func make_pickups() -> void:
 			mesh.material_override = material
 			prop.add_child(mesh)
 		var label := Label3D.new()
-		label.text = "SMG" if item.id == "smg" else "AMMO"
+		label.text = str(item.id).to_upper()
 		label.position.y = 0.4
 		label.font_size = 24
 		label.pixel_size = 0.0012
@@ -689,14 +742,38 @@ func collect_pickup() -> bool:
 	if item.is_empty(): return false
 	item.taken = true
 	item.node.hide()
-	if item.id == "smg":
-		if not weapon_ammo.has("smg"):
-			weapon_ammo.smg = {"magazine":WeaponDefs.DATA.smg.capacity,"reserve":WeaponDefs.DATA.smg.reserve}
-		announce("SMG SECURED / Press 2 to equip, 1 for pistol.")
+	if item.id in ["smg","shotgun"]:
+		if not weapon_ammo.has(item.id):
+			var definition: Dictionary = WeaponDefs.DATA[item.id]
+			weapon_ammo[item.id] = {"magazine":definition.capacity,"reserve":definition.reserve}
+		announce(str(item.id).to_upper()+" SECURED / Select 1, 2 or 3.")
+	elif item.id == "medical":
+		health = mini(100,health+40)
+		announce("MEDICAL SUPPLIES +40")
 	else:
 		for id in weapon_ammo:
-			weapon_ammo[id].reserve += 24 if id == "pistol" else 48
+			weapon_ammo[id].reserve += 24 if id == "pistol" else 8 if id == "shotgun" else 48
 		announce("AMMUNITION SECURED")
 	register_event("weapon_pickup",item.id)
 	play_sound("use",item.position)
 	return true
+
+func operation_objective() -> String:
+	var text: String = ["01 / RESTORE ACCESS · SECURITY AMBER TERMINAL", "02 / RECOVER DATA · OPERATIONS UP THE STRIPED RAMP", "03 / EXTRACT · NORTHEAST LIFT"][operation_stage]
+	var target: Vector3 = mission.panel if operation_stage==0 else mission.core if operation_stage==1 else mission.exit
+	text += " / %dm" % roundi(player.global_position.distance_to(target))
+	if operation_stage<2 and player.camera.global_position.distance_to(target+Vector3(0,1.35,0))<1.8 and has_los(player.camera.global_position,target+Vector3(0,1.35,0)):
+		text += " | E · " + ("RESTORE ACCESS" if operation_stage==0 else "RECOVER DATA")
+	return text
+
+func operation_interact() -> void:
+	if operation_stage>=2: return
+	var target: Vector3 = mission.panel if operation_stage==0 else mission.core
+	var eye_target := target+Vector3(0,1.35,0)
+	if player.camera.global_position.distance_to(eye_target)>1.8 or not has_los(player.camera.global_position,eye_target): return
+	operation_stage += 1
+	panel_disabled = true
+	core_collected = operation_stage==2
+	register_event("access_restored" if operation_stage==1 else "operation_data_recovered","deep_signal")
+	play_sound("use",target)
+	announce("ACCESS RESTORED / Reach OPERATIONS via the striped ramp." if operation_stage==1 else "DATA SECURED / Reach the northeast extraction lift.")

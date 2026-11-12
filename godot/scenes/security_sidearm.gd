@@ -18,10 +18,10 @@ func equip(id: String) -> void:
 		model.hide()
 	var fresh := not cached_models.has(id)
 	if fresh:
-		cached_models[id] = (load("res://assets/weapons/security_smg.glb") if id == "smg" else Model).instantiate()
+		cached_models[id] = (load("res://assets/weapons/security_"+id+".glb") if id in ["smg","shotgun"] else Model).instantiate()
 		add_child(cached_models[id])
 	model = cached_models[id]
-	model.scale = Vector3.ONE * (0.8 if id == "smg" else 1.0)
+	model.scale = Vector3.ONE * (0.7 if id == "shotgun" else 0.8 if id == "smg" else 1.0)
 	model.show()
 	slide = model.find_child("Slide", true, false)
 	magazine = model.find_child("Magazine", true, false)

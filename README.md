@@ -74,3 +74,7 @@ The archive near the core holds optional intel: taking it triggers security unle
 Extracting after a quiet panel shutdown disables Blackout's stationary ranged turret. An alarm instead adds an armored pursuer. Recovered intel supplies a later clue. These consequences commit only on successful extraction; failed attempts reset devices and provisional rewards. Start Campaign clears prior campaign decisions while preserving the current session CSV.
 
 New impact sparks, enemy stagger, damage-direction cues and positional synthesized audio reinforce combat. All visual/audio assets are original. Implementation details, limits and verification are in [the expansion report](docs/next-level-release.md), [systems documentation](docs/encounter-systems.md), and [art/audio provenance](docs/feedback-assets.md). `npm test` runs both the existing campaign checks and the independently authored encounter suite.
+
+## Native tactical PvE playtest
+
+The Godot title menu now offers **Deep Signal / Tactical Operation**, separate from the original campaign. It adds armed SMG/rifle patrols, alternate approaches, elevated operations, optional supplies and a collectible shotgun. Open `godot/project.godot` and press F5. See [launch, validation and unfinished stretch work](docs/godot/tactical-pve-expansion.md).

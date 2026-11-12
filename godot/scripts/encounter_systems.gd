@@ -69,6 +69,8 @@ func reset() -> void:
 			_note("BLACKOUT LOG: Backup power is independent of the extraction turret. Watch the long corridor.")
 		if decisions.get("intel", false):
 			_note("RECOVERED INTEL: Backup switch is in the southwest service bay. Turrets cannot move; cross behind walls.")
+	elif mission_id == "tactical-operation":
+		_note("DEEP SIGNAL: Restore SECURITY access, recover the elevated OPERATIONS archive, then extract. Amber visors telegraph attacks; break sight. MAINTENANCE bypasses the direct security lane. ARMORY is optional.")
 	else:
 		_note("BREACH LOG: Scout units move quickly but have light armor. Keep space and use the corners.")
 	_refresh_visuals()

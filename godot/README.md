@@ -82,3 +82,7 @@ See [movement verification](../docs/godot/tactical-movement.md).
 Each mission and retry starts with the pistol (8 loaded, 40 reserve) and restores its optional SMG and one ammunition supply. Inventory does not carry between missions. E collects; 1/2 selects owned weapons. Switching cancels a reload without transferring ammunition; only a completed reload moves missing rounds from reserve into the magazine. The SMG is automatic; the pistol fires once per press.
 
 See [weapon inventory rules, assets and verification](../docs/godot/weapon-inventory.md).
+
+## Deep Signal tactical operation
+
+Press F5, choose **Deep Signal / Tactical Operation**, then Deploy. The original **Start Campaign** remains available. Restore security access, recover the elevated archive and extract. Slot 3 equips the optional armory shotgun. No checkpoint saving is included. See [playtest handoff, actual tests, screenshots and remaining work](../docs/godot/tactical-pve-expansion.md).
