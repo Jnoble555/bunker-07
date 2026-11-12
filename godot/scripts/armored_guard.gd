@@ -207,7 +207,7 @@ func _update_detection(target_player: Node3D, delta: float) -> void:
 
 
 func _can_see(target_player: Node3D) -> bool:
-	return bool(controller.call("has_los", global_position + Vector3(0.0, 1.4, 0.0), target_player.global_position + Vector3(0.0, 1.4, 0.0)))
+	return bool(controller.call("has_los", global_position + Vector3(0.0, 1.4, 0.0), target_player.camera.global_position))
 
 
 func _set_motion_toward(target: Vector3, speed: float, delta: float) -> void:

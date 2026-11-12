@@ -106,7 +106,7 @@ func update(delta: float) -> void:
 	var was_tracking: bool = camera_alert > 0
 	if not enabled:
 		camera_alert = 0
-	elif distance < 12 and in_cone and _visible(CAMERA, player.global_position):
+	elif distance < 12 and in_cone and bool(controller.call("has_los", CAMERA + Vector3(0, 1.4, 0), player.camera.global_position)):
 		camera_alert = minf(1.25, camera_alert + delta)
 	else:
 		camera_alert = maxf(0, camera_alert - delta * 2)
@@ -183,7 +183,7 @@ func nearby() -> Dictionary:
 	var nearest_distance: float = INF
 	for device: Dictionary in _devices():
 		var distance: float = _distance(device["position"], player.global_position)
-		if distance <= 1.6 and distance < nearest_distance and _visible(player.global_position, device["position"]):
+		if distance <= 1.6 and distance < nearest_distance and bool(controller.call("interaction_los", player.camera.global_position, device["position"] + Vector3(0, 1.4, 0))):
 			nearest = device
 			nearest_distance = distance
 	return nearest
@@ -299,7 +299,7 @@ func _sound(kind: String, at: Vector3) -> void:
 		audio.call("play", kind, at)
 
 func _visible(from: Vector3, to: Vector3) -> bool:
-	return bool(controller.call("has_los", from + Vector3(0, 1.4, 0), to + Vector3(0, 1.4, 0)))
+	return bool(controller.call("device_los", from, to))
 
 func _playing() -> bool:
 	return controller and bool(controller.get("active")) and not controller.get_tree().paused

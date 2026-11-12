@@ -67,6 +67,7 @@ func _install_inputs() -> void:
 		"move_forward": [KEY_W, KEY_UP], "move_back": [KEY_S, KEY_DOWN],
 		"strafe_left": [KEY_A], "strafe_right": [KEY_D],
 		"turn_left": [KEY_LEFT], "turn_right": [KEY_RIGHT], "fire": [KEY_SPACE],
+		"crouch": [KEY_CTRL], "sprint": [KEY_SHIFT], "lean_left": [KEY_Q], "lean_right": [KEY_C],
 		"reload": [KEY_R], "interact": [KEY_E], "pause": [KEY_ESCAPE, KEY_P], "retry": [KEY_F5]
 	}
 	for action in bindings:
@@ -81,6 +82,11 @@ func _install_inputs() -> void:
 	mouse.button_index = MOUSE_BUTTON_LEFT
 	if not InputMap.action_has_event("fire", mouse):
 		InputMap.action_add_event("fire", mouse)
+
+	var aim_button := InputEventMouseButton.new()
+	aim_button.button_index = MOUSE_BUTTON_RIGHT
+	if not InputMap.has_action("aim_weapon"): InputMap.add_action("aim_weapon")
+	if not InputMap.action_has_event("aim_weapon", aim_button): InputMap.action_add_event("aim_weapon", aim_button)
 
 func request_action(action: String) -> void:
 	if active and not get_tree().paused:
@@ -376,3 +382,21 @@ func _update_hud() -> void:
 	status.visible = hud.visible
 	feedback.visible = hud.visible
 	crosshair.visible = hud.visible
+
+
+func interaction_los(from: Vector3, target: Vector3) -> bool:
+	if from.distance_to(target) < 0.03: return true
+	var query := PhysicsRayQueryParameters3D.create(from, target, 1)
+	query.hit_from_inside = true
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty(): return true
+	return hit.collider.get_meta("interaction_at", Vector3.INF).distance_to(target - Vector3(0,1.4,0)) < 0.01
+
+func device_los(from: Vector3, to: Vector3) -> bool:
+	var query := PhysicsRayQueryParameters3D.create(from + Vector3(0,1.4,0), to + Vector3(0,1.4,0), 1)
+	var excluded: Array[RID] = []
+	for prop in get_tree().get_nodes_in_group("solid_props"):
+		if prop.get_meta("interaction_at", Vector3.INF).distance_to(from) < 0.01:
+			excluded.append(prop.get_rid())
+	query.exclude = excluded
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()

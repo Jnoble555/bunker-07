@@ -22,7 +22,7 @@ var damage_direction: String = ""
 var tutorial_index: int = 0
 var tutorial_active: bool = false
 var tutorial_text: Label
-var tutorial_steps: Array[String] = ["Move with WASD / Up, Down","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
+var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift sprint / Q,C lean / RMB aim","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
 var campaign_button: Button
 var continue_button: Button
 var settings_button: Button
@@ -207,6 +207,7 @@ func show_title() -> void:
 	_show_menu("title","BUNKER 07","NATIVE THREE-MISSION CAMPAIGN\n\nBreach security, secure Control Room and restore Blackout extraction power.\nThe browser remains the behavioral reference for this port.")
 
 func set_paused(value: bool) -> void:
+	if value and player: player.clear_held_inputs()
 	super.set_paused(value)
 	_update_hud()
 
@@ -271,7 +272,10 @@ func shoot() -> void:
 		var center: Vector3 = object.get_meta("target_center",object.global_position)
 		if object is Area3D and object.has_method("receive_hit"): center = object.get_parent().global_position
 		var depth: float = (center-origin).dot(direction)
-		if depth>0 and depth<wall_depth:
+		# A pitched ray hits the nearest surface, not the actor's floor anchor.
+		# Retain the behind-camera rejection only for an overlapping hit area.
+		var surface_depth: float = origin.distance_to(hit.position)
+		if surface_depth <= wall_depth + 0.001 and (surface_depth > 0.001 or depth > 0):
 			if object.has_meta("device_id"):
 				if systems.shootable_hit(str(object.get_meta("device_id"))): target_id = str(object.get_meta("device_id"))
 			elif object.has_method("receive_hit"):
@@ -300,7 +304,7 @@ func interact() -> void:
 		play_sound("use",player.global_position)
 		return
 	if mission.id=="breach" or panel_disabled or planar_distance(player.global_position,mission.panel)>1.7: return
-	if not has_los(player.camera.global_position,mission.panel+Vector3(0,1.4,0)): return
+	if not interaction_los(player.camera.global_position,mission.panel+Vector3(0,1.4,0)): return
 	panel_disabled = true
 	room.set_panel_disabled(true)
 	play_sound("use",mission.panel)
@@ -462,7 +466,7 @@ func _abandon() -> void:
 	show_title()
 
 func _show_controls() -> void:
-	_show_menu("controls","CONTROLS","WASD / Up, Down: move · Mouse / Left, Right: aim\nClick / Space: fire · R: reload · E: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
+	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Q,C: lean / RMB: aim\nClick / Space: fire · R: reload · E: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
 
 func _save_settings() -> void:
 	session.preferences.volume = volume_slider.value
@@ -535,6 +539,7 @@ func _build_campaign_ui() -> void:
 	column.move_child(scroll,1)
 
 func _show_menu(state: String,title: String,text: String) -> void:
+	if player: player.clear_held_inputs()
 	menu_state = state
 	menu_title.text = title
 	menu_text.text = text

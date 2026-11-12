@@ -141,10 +141,10 @@ func run() -> void:
 	await fresh()
 	stop_enemies()
 	await use_device(Vector3(15, 0, 15))
-	check("bulkhead closes and blocks LOS", not game.systems.door_open and not game.has_los(Vector3(17, 1.4, 15), Vector3(17, 1.4, 11)))
+	check("bulkhead closes and blocks LOS", not game.systems.door_open and not game.has_los(Vector3(17.5, 1.4, 14.5), Vector3(17.5, 1.4, 11)))
 	game.request_action("interact")
 	await frames(3)
-	check("bulkhead reopens from switch", game.systems.door_open and game.has_los(Vector3(17, 1.4, 15), Vector3(17, 1.4, 11)))
+	check("bulkhead reopens from switch", game.systems.door_open and game.has_los(Vector3(17.5, 1.4, 14.5), Vector3(17.5, 1.4, 11)))
 	game.enemies[0].global_position = Vector3(17, 0, 13)
 	await frames(3)
 	game.request_action("interact")
@@ -184,7 +184,7 @@ func run() -> void:
 	check("disabled panel makes optional intel quiet", game.panel_disabled and game.systems.intel and not game.alarm_triggered)
 	check("optional rewards stay provisional before extraction", not game.session.decisions.intel and not game.session.decisions.security_disabled)
 	var control_walked: bool = true
-	for target: Vector3 in [Vector3(15, 0, 15),Vector3(17, 0, 15),Vector3(17, 0, 11),Vector3(17, 0, 9),Vector3(21, 0, 9),Vector3(21, 0, 3),Vector3(23, 0, 3)]:
+	for target: Vector3 in [Vector3(15, 0, 14.55),Vector3(17.5, 0, 14.55),Vector3(17.5, 0, 11),Vector3(17, 0, 9),Vector3(21, 0, 9),Vector3(21, 0, 3),Vector3(23, 0, 3)]:
 		control_walked = (await walk_to(target)) and control_walked
 	check("Control Room collision route commits quiet security and optional finds", control_walked and not game.active and game.session.decisions.security_disabled and game.session.decisions.intel and game.session.decisions.secret)
 	check("fast accurate optional quiet route earns S rank", game.menu_text.text.contains("RANK S"))
@@ -202,11 +202,11 @@ func run() -> void:
 	check("Blackout extraction requires restored power", game.active and not game.power_restored)
 	await place(Vector3(3, 0, 3))
 	var blackout_walked: bool = await walk_to(Vector3(3, 0, 15))
-	blackout_walked = (await walk_to(Vector3(7, 0, 15))) and blackout_walked
+	blackout_walked = (await walk_to(Vector3(6, 0, 14.35))) and blackout_walked
 	game.request_action("interact")
 	await frames(2)
 	check("Blackout power switch restores power", game.power_restored and game.panel_disabled)
-	blackout_walked = (await walk_to(Vector3(23, 0, 15))) and blackout_walked
+	blackout_walked = (await walk_to(Vector3(23, 0, 14.35))) and blackout_walked
 	blackout_walked = (await walk_to(Vector3(23, 0, 3))) and blackout_walked
 	check("Blackout collision route reaches complete campaign summary", blackout_walked and not game.active and game.menu_text.text.contains("BREACH") and game.menu_text.text.contains("BLACKOUT"))
 	var event_count: int = game.events.size()

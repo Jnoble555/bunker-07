@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## Flat movement and yaw-only aim intentionally match the browser reference.
+## Grounded tactical movement; yaw owns horizontal travel, camera owns pitch/lean.
 
 const SPEED: float = 5.3
 var controller: Node
@@ -7,15 +7,24 @@ var camera: Camera3D
 var weapon: Node3D
 var muzzle: MeshInstance3D
 var muzzle_light: OmniLight3D
+var body_shape: CollisionShape3D
+var crouched := false
+var aiming := false
+var pitch := 0.0
+var lean := 0.0
+
 
 func setup(owner_controller: Node) -> void:
 	controller = owner_controller
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	collision_layer = 2
 	collision_mask = 1
-	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
+	motion_mode = CharacterBody3D.MOTION_MODE_GROUNDED
+	floor_snap_length = 0.3
+	floor_max_angle = deg_to_rad(48)
 	safe_margin = 0.002
 	var shape := CollisionShape3D.new()
+	body_shape = shape
 	var capsule := CapsuleShape3D.new()
 	capsule.radius = 0.36
 	capsule.height = 1.8
@@ -69,9 +78,21 @@ func _add_weapon_box(size: Vector3, at: Vector3, color: Color) -> MeshInstance3D
 	return instance
 
 func reset_player() -> void:
+	clear_held_inputs()
 	position = Vector3(3, 0, 17)
 	rotation = Vector3(0, -PI / 2, 0)
 	velocity = Vector3.ZERO
+	crouched = false
+	aiming = false
+	pitch = 0.0
+	lean = 0.0
+	if body_shape:
+		body_shape.shape.height = 1.8
+		body_shape.position.y = 0.9
+	if camera:
+		camera.position = Vector3(0, 1.4, 0)
+		camera.rotation = Vector3.ZERO
+		camera.fov = rad_to_deg(2 * atan(0.68))
 	if weapon:
 		weapon.position = Vector3(0.14, -0.07, -0.65)
 		muzzle.visible = false
@@ -83,7 +104,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(-event.relative.x * float(controller.session.preferences.sensitivity))
-		if event.relative.x != 0: controller.progress_tutorial("aim")
+		pitch = clampf(pitch - event.relative.y * float(controller.session.preferences.sensitivity), deg_to_rad(-80), deg_to_rad(80))
+		camera.rotation.x = pitch
+		if event.relative != Vector2.ZERO: controller.progress_tutorial("aim")
 
 func _physics_process(delta: float) -> void:
 	if not controller or not controller.active:
@@ -92,8 +115,27 @@ func _physics_process(delta: float) -> void:
 	rotate_y((Input.get_action_strength("turn_left") - Input.get_action_strength("turn_right")) * 2.1 * delta)
 	var input := Input.get_vector("strafe_left", "strafe_right", "move_forward", "move_back")
 	var direction := global_basis * Vector3(input.x, 0, input.y)
-	velocity = direction * SPEED
+	var wants_crouch := Input.is_action_pressed("crouch")
+	if wants_crouch or (crouched and not can_stand()):
+		crouched = true
+	else:
+		crouched = false
+	body_shape.shape.height = 1.05 if crouched else 1.8
+	body_shape.position.y = body_shape.shape.height * 0.5
+	aiming = Input.is_action_pressed("aim_weapon")
+	var speed := SPEED * (0.45 if crouched else (1.5 if Input.is_action_pressed("sprint") and not aiming else 1.0))
+	if aiming: speed *= 0.65
+	velocity.x = direction.x * speed
+	velocity.z = direction.z * speed
+	velocity.y = -0.5 if is_on_floor() else maxf(velocity.y - 18.0 * delta, -30.0)
+	_step_up(Vector3(velocity.x, 0, velocity.z) * delta)
 	move_and_slide()
+	var eye := Vector3(0, 0.85 if crouched else 1.4, 0)
+	var desired := Input.get_axis("lean_left", "lean_right") * 0.32
+	lean = safe_lean(eye, desired)
+	camera.position = eye + Vector3(lean, 0, 0)
+	camera.rotation = Vector3(pitch, 0, -lean * 0.22)
+	camera.fov = lerpf(camera.fov, 58.0 if aiming else rad_to_deg(2 * atan(0.68)), minf(1, delta * 14))
 	# Raise the sidearm during the existing .8s reload so the magazine stays visible.
 	var reload_offset: float = 0.0
 	if controller.reload_remaining > 0:
@@ -143,3 +185,47 @@ func _make_weapon_view(model: Node3D) -> void:
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	image.stretch_mode = TextureRect.STRETCH_SCALE
 	overlay.add_child(image)
+
+func can_stand() -> bool:
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = 0.36
+	capsule.height = 1.76
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = capsule
+	query.transform = Transform3D(Basis.IDENTITY, global_position + Vector3(0, 0.92, 0))
+	query.collision_mask = 1
+	query.exclude = [get_rid()]
+	return get_world_3d().direct_space_state.intersect_shape(query).is_empty()
+
+func safe_lean(eye: Vector3, amount: float) -> float:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 0.12
+	query.shape = sphere
+	query.transform = Transform3D(Basis.IDENTITY, global_transform * eye)
+	query.motion = global_basis.x * amount
+	query.collision_mask = 1
+	query.exclude = [get_rid()]
+	if not get_world_3d().direct_space_state.intersect_shape(query).is_empty(): return 0
+	var sweep := get_world_3d().direct_space_state.cast_motion(query)
+	return amount * maxf(0, sweep[0] - 0.03)
+
+func _step_up(motion: Vector3) -> void:
+	if not is_on_floor() or motion.length() < 0.0001 or not test_move(global_transform, motion): return
+	var raised := global_transform
+	if test_move(raised, Vector3.UP * 0.26): return
+	raised.origin.y += 0.26
+	if test_move(raised, motion): return
+	raised.origin += motion
+	var landing := KinematicCollision3D.new()
+	if test_move(raised, Vector3.DOWN * 0.3, landing) and landing.get_normal().y > 0.7:
+		global_position.y += 0.26 + landing.get_travel().y
+
+func clear_held_inputs() -> void:
+	for action in ["move_forward", "move_back", "strafe_left", "strafe_right", "turn_left", "turn_right", "crouch", "sprint", "lean_left", "lean_right", "aim_weapon", "fire"]:
+		Input.action_release(action)
+	aiming = false
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		clear_held_inputs()

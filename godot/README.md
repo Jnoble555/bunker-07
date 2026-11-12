@@ -18,7 +18,11 @@ Replace the executable path on another machine; add `--editor` to open the edito
 | Input | Action |
 | --- | --- |
 | WASD / Up, Down | Move |
-| Mouse / Left, Right | Yaw aim |
+| Mouse / Left, Right | Full mouse look / keyboard yaw |
+| Ctrl (hold) | Crouch; standing requires headroom |
+| Shift (hold) | Sprint |
+| Q / C (hold) | Lean left / right, constrained by obstacles |
+| Right mouse (hold) | Aim with reduced FOV and speed |
 | Click / Space | Fire |
 | R | Timed reload |
 | E | Use nearby panel/device |
@@ -62,3 +66,12 @@ One browser tile is two meters: `(x,y)` becomes native `(2x,0,2y)`. Physics bits
 The last command opens a short graphical run and captures all mission/settings/journal/summary views. Tests run real physics and scripted input; they do not replace a full human campaign playthrough. `npm test` still runs the browser regression suite separately.
 
 See [current parity](../docs/godot/parity.md), [release verification and screenshots](../docs/godot/campaign-release.md), and [independent review](../docs/godot/campaign-review.md). Earlier M1 verification/checkpoint documents are historical records.
+
+## Tactical movement lab
+
+The native movement milestone deliberately expands the browser reference with grounded ramps/stairs, vertical look, crouch, sprint, lean and aiming. Open scenes/movement_lab.tscn in Godot and press F6, or run:
+```powershell
+& $godotBin --path .\godot res://scenes/movement_lab.tscn
+```
+The separate lab has low cover ahead, a headroom bay on the left, and a ramp/stairs on the right. F5 resets it. It cannot commit campaign extraction progress. Campaign launch remains F5 from the main project (Start Campaign, Deploy).
+See [movement verification](../docs/godot/tactical-movement.md).

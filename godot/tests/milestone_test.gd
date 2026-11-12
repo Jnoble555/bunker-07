@@ -256,11 +256,11 @@ func run() -> void:
 	check("retry resets all included encounter state", game.health == 100 and game.ammo == 8 and game.reload_remaining == 0.0 and game.cooldown == 0.0 and not game.panel_disabled and not game.alarm_triggered and not game.core_collected and game.guard.hp == 3 and game.guard.stagger == 0.0 and game.guard.attack_windup == 0.0 and game.guard.alert_progress == 0.0)
 	game.guard.set_physics_process(false)
 	var walked: bool = await walk_to(Vector3(3, 0, 15))
-	walked = (await walk_to(Vector3(9, 0, 15))) and walked
+	walked = (await walk_to(Vector3(8, 0, 14.55))) and walked
 	game.request_action("interact")
 	await frames(2)
 	check("collision-driven route reaches usable maintenance panel", walked and game.panel_disabled)
-	for target: Vector3 in [Vector3(17, 0, 15), Vector3(17, 0, 11), Vector3(17, 0, 9), Vector3(21, 0, 9), Vector3(21, 0, 3), Vector3(23, 0, 3)]:
+	for target: Vector3 in [Vector3(15, 0, 14.55), Vector3(17.5, 0, 14.55), Vector3(17.5, 0, 11), Vector3(17, 0, 9), Vector3(21, 0, 9), Vector3(21, 0, 3), Vector3(23, 0, 3)]:
 		walked = (await walk_to(target)) and walked
 	check("complete maintenance route crosses opened gate and extracts", walked and game.core_collected and not game.active and game.health == 100 and game.menu_state == "result")
 	check("successful result exposes campaign rank and continuation", game.menu_state == "result" and game.menu_text.text.contains("RANK") and game.continue_button.visible)

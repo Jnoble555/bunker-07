@@ -1,6 +1,6 @@
 extends Node3D
 ## Original primitive geometry for all three campaign missions.
-## One reference tile is two meters. Only walls/floor/ceiling and the core gate collide.
+## One reference tile is two meters. World surfaces, gates and substantial props share solid collision layer 1.
 
 const IndustrialConsoleScene = preload("res://scenes/industrial_console.tscn")
 
@@ -79,6 +79,7 @@ func build(config: Dictionary = {}) -> void:
 		_make_control_devices()
 		_label("DIRECT / SECURITY", Vector3(3.1, 2.25, 11), Vector3.ZERO, Color("dfb265"))
 		_label("MAINTENANCE", Vector3(9, 1.62, 15.8), Vector3.ZERO, Color("8ed5c8"), self, 28, 0.0015, 3)
+		_prop_collision(self, Vector3(13.4, 0.9, 11.68), Vector3(0.72, 1.8, 0.32))
 		_mesh_box(self, "EquipmentRack", Vector3(13.4, 0.9, 11.68), Vector3(0.72, 1.8, 0.32), _materials["steel"])
 		for i in 5:
 			_mesh_box(self, "RackVent", Vector3(13.4, 0.36 + i * 0.27, 11.5), Vector3(0.55, 0.08, 0.015), _materials["dark"])
@@ -248,11 +249,14 @@ func _make_panel() -> void:
 	if mission_id == "control-room":
 		var console := IndustrialConsoleScene.instantiate()
 		console.name = "ConsoleVisual"
+		console.position.z = 0.45
+		_prop_collision(panel, Vector3(-0.04, 0.8, 0.45), Vector3(1.0, 1.6, 0.72), _panel_position)
 		panel.add_child(console)
 		_panel_screen = console.get_node("RecessedDisplay") as MeshInstance3D
 		_panel_on_material = _emissive(Color("5c978a"), 0.14)
 		_panel_screen.material_override = _panel_on_material
 	else:
+		_prop_collision(panel, Vector3(0, 0.75, 0), Vector3(0.75, 1.5, 0.4), _panel_position)
 		_mesh_box(panel, "Stand", Vector3(0, 0.54, 0), Vector3(0.62, 1.08, 0.4), _materials["steel"])
 		_mesh_box(panel, "Bezel", Vector3(0, 1.22, 0), Vector3(0.75, 0.52, 0.28), _materials["dark"])
 		_panel_screen = _mesh_box(panel, "Screen", Vector3(-0.383, 1.23, 0), Vector3(0.014, 0.3, 0.2), _materials["cyan"])
@@ -298,8 +302,8 @@ func _make_practicals() -> void:
 		_practical_lights.append(fixture)
 
 func _make_control_devices() -> void:
-	# Device meshes never block movement or physics rays. Their hit areas are owned
-	# by the encounter module so appearance cannot silently change hit tolerance.
+	# Shootable hit areas are owned
+	# by the encounter module; terminal housings have separate world collision.
 	var bulkhead_body := _solid_box("Bulkhead", Vector3(17, 1.5, 13), Vector3(2, 3, 2), _materials["steel"])
 	_bulkhead = bulkhead_body
 	for child in bulkhead_body.get_children():
@@ -308,6 +312,7 @@ func _make_control_devices() -> void:
 	set_bulkhead(false)
 	for entry in [["SERVICE POWER", Vector3(13, 0, 15)], ["OVERLOAD GRID", Vector3(17, 0, 15)]]:
 		var at: Vector3 = entry[1]
+		_prop_collision(self, at + Vector3(0, 0.7, 0), Vector3(0.6, 1.4, 0.35), at)
 		_mesh_box(self, "DeviceStand", at + Vector3(0, 0.48, 0), Vector3(0.6, 0.96, 0.35), _materials["steel"])
 		_mesh_box(self, "DeviceBezel", at + Vector3(0, 1.15, 0), Vector3(0.65, 0.5, 0.25), _materials["dark"])
 		_mesh_box(self, "DeviceScreen", at + Vector3(-0.331, 1.15, 0), Vector3(0.015, 0.32, 0.18), _materials["cyan"])
@@ -333,8 +338,9 @@ func _make_control_devices() -> void:
 	intel.get_child(intel.get_child_count() - 1).position = Vector3(0, 1.9, 0)
 	var cache := Node3D.new()
 	cache.name = "HiddenCache"
-	cache.position = Vector3(15, 0, 17)
+	cache.position = Vector3(15, 0, 17.3)
 	add_child(cache)
+	_prop_collision(cache, Vector3(0, 0.35, 0), Vector3(0.75, 0.7, 0.65), Vector3(15, 0, 17))
 	_mesh_box(cache, "SupplyBox", Vector3(0, 0.35, 0), Vector3(0.75, 0.7, 0.65), _materials["steel"])
 	_mesh_box(cache, "MedicalStripe", Vector3(-0.38, 0.4, 0), Vector3(0.02, 0.16, 0.45), _materials["green"])
 
@@ -345,6 +351,8 @@ func set_optional_collected(intel: bool, secret: bool) -> void:
 	var cache := get_node_or_null("HiddenCache") as Node3D
 	if cache:
 		cache.visible = not secret
+		for child in cache.get_children():
+			if child is StaticBody3D: child.collision_layer = 0 if secret else 1
 
 func set_bulkhead(closed: bool) -> void:
 	if not is_instance_valid(_bulkhead):
@@ -413,3 +421,18 @@ func _label(text: String, pos: Vector3, _degrees: Vector3, color: Color, parent:
 	label.no_depth_test = false
 	parent.add_child(label)
 	return label
+
+func _prop_collision(parent: Node3D, center: Vector3, size: Vector3, interaction_at: Vector3 = Vector3.INF) -> void:
+	var body := StaticBody3D.new()
+	body.name = "PropCollision"
+	body.add_to_group("solid_props")
+	body.set_meta("interaction_at", interaction_at)
+	body.position = center
+	body.collision_layer = 1
+	body.collision_mask = 0
+	parent.add_child(body)
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = size
+	shape.shape = box
+	body.add_child(shape)
