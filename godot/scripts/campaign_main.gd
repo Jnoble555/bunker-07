@@ -1,4 +1,12 @@
 extends "res://scripts/main.gd"
+const WeaponDefs = preload("res://scripts/weapon_definitions.gd")
+var weapon_id := "pistol"
+var weapon_ammo: Dictionary = {}
+var pickups: Array[Dictionary] = []
+var pickup_nodes: Node3D
+func get_weapon_def() -> Dictionary:
+	return WeaponDefs.DATA[weapon_id]
+
 ## Campaign session built on the independently tested M1 movement/UI shell.
 const MissionData = preload("res://scripts/mission_data.gd")
 const CampaignState = preload("res://scripts/campaign_state.gd")
@@ -22,7 +30,7 @@ var damage_direction: String = ""
 var tutorial_index: int = 0
 var tutorial_active: bool = false
 var tutorial_text: Label
-var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift sprint / Q,C lean / RMB aim","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
+var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift sprint / Q,C lean / RMB aim / E pickups / 1,2 weapons","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
 var campaign_button: Button
 var continue_button: Button
 var settings_button: Button
@@ -159,7 +167,7 @@ func start_run() -> void:
 	if audio: audio.stop_all()
 	get_tree().paused = false
 	pending_actions.clear()
-	ammo = 8
+	reset_inventory()
 	health = 100
 	cooldown = 0
 	reload_remaining = 0
@@ -182,6 +190,7 @@ func start_run() -> void:
 	player.reset_player()
 	player.global_position = mission.spawn
 	systems.reset()
+	make_pickups()
 	attempts += 1
 	register_event("mission_start","")
 	last_result = {}
@@ -221,7 +230,12 @@ func _physics_process(delta: float) -> void:
 	message_left = maxf(0,message_left-delta)
 	if reload_remaining>0:
 		reload_remaining = maxf(0,reload_remaining-delta)
-		if reload_remaining==0: ammo = 8
+		if reload_remaining==0:
+			var state: Dictionary = weapon_ammo[weapon_id]
+			var loaded: int = mini(int(get_weapon_def().capacity)-ammo, int(state.reserve))
+			ammo += loaded
+			state.reserve -= loaded
+			state.magazine = ammo
 	if Input.get_vector("strafe_left","strafe_right","move_forward","move_back").length()>0: progress_tutorial("move")
 	if Input.get_axis("turn_right","turn_left")!=0: progress_tutorial("aim")
 	var actions := pending_actions.duplicate()
@@ -231,6 +245,9 @@ func _physics_process(delta: float) -> void:
 			"fire": shoot()
 			"reload": begin_reload()
 			"interact": interact()
+			"weapon_1": switch_weapon("pistol")
+			"weapon_2": switch_weapon("smg")
+	if get_weapon_def().automatic and Input.is_action_pressed("fire"): shoot()
 	systems.update(delta)
 	if not active: return
 	if mission.id=="control-room":
@@ -252,20 +269,25 @@ func shoot() -> void:
 	if not active or get_tree().paused or ammo==0 or cooldown>0 or reload_remaining>0: return
 	ammo -= 1
 	shots += 1
-	cooldown = .24
+	cooldown = get_weapon_def().interval
+	weapon_ammo[weapon_id].magazine = ammo
 	flash = .10
 	hit_feedback = 0
 	progress_tutorial("fire")
-	play_sound("fire",player.global_position)
+	play_sound(get_weapon_def().sound,player.global_position)
 	var origin: Vector3 = player.camera.global_position
 	var direction: Vector3 = -player.camera.global_basis.z
-	var query := PhysicsRayQueryParameters3D.create(origin,origin+direction*50,1|4|8,[player.get_rid()])
+	var spread: float = get_weapon_def().spread * (0.5 if player.aiming else 1.0)
+	if spread > 0:
+		direction = (direction + player.camera.global_basis.x * randf_range(-spread,spread) + player.camera.global_basis.y * randf_range(-spread,spread)).normalized()
+	var shot_range: float = get_weapon_def().range
+	var query := PhysicsRayQueryParameters3D.create(origin,origin+direction*shot_range,1|4|8,[player.get_rid()])
 	query.collide_with_areas = true
 	query.hit_from_inside = true
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty(): _impact(hit.position)
-	var wall_hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+direction*50,1))
-	var wall_depth: float = origin.distance_to(wall_hit.position) if not wall_hit.is_empty() else 50.0
+	var wall_hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+direction*shot_range,1))
+	var wall_depth: float = origin.distance_to(wall_hit.position) if not wall_hit.is_empty() else shot_range
 	var target_id := ""
 	if not hit.is_empty():
 		var object: Node3D = hit.collider
@@ -281,7 +303,7 @@ func shoot() -> void:
 			elif object.has_method("receive_hit"):
 				hits += 1
 				hit_feedback = .24
-				object.receive_hit()
+				object.receive_hit(int(get_weapon_def().damage))
 				var actor: Node = object.get_parent() if object is Area3D else object
 				target_id = str(enemies.find(actor)+1)
 		if target_id!="":
@@ -292,14 +314,15 @@ func shoot() -> void:
 	register_event("shot","",target_id if target_id not in ["camera","lamp"] else "")
 
 func begin_reload() -> void:
-	if active and not get_tree().paused and ammo<8 and reload_remaining==0:
-		reload_remaining = .8
+	if active and not get_tree().paused and ammo<int(get_weapon_def().capacity) and int(weapon_ammo[weapon_id].reserve)>0 and reload_remaining==0:
+		reload_remaining = get_weapon_def().reload
 		progress_tutorial("reload")
 		play_sound("reload",player.global_position)
 		register_event("reload","")
 
 func interact() -> void:
 	if not active or get_tree().paused: return
+	if collect_pickup(): return
 	if systems.interact():
 		play_sound("use",player.global_position)
 		return
@@ -466,7 +489,7 @@ func _abandon() -> void:
 	show_title()
 
 func _show_controls() -> void:
-	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Q,C: lean / RMB: aim\nClick / Space: fire · R: reload · E: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
+	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Q,C: lean / RMB: aim / 1,2: weapons\nClick / Space: fire · R: reload · E: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
 
 func _save_settings() -> void:
 	session.preferences.volume = volume_slider.value
@@ -562,14 +585,15 @@ func _show_menu(state: String,title: String,text: String) -> void:
 
 func _update_hud() -> void:
 	if not hud: return
-	hud.text = "BUNKER 07 / %s   |   HEALTH %d   AMMO %d/8   %.0fs" % [mission.get("title",""),health,ammo,elapsed]
+	hud.text = "BUNKER 07 / %s | HEALTH %d | %s %d/%d RESERVE %d | %.0fs" % [mission.get("title",""),health,get_weapon_def().name,ammo,get_weapon_def().capacity,weapon_ammo.get(weapon_id,{}).get("reserve",0),elapsed]
 	var objective := ""
 	match mission.get("id",""):
 		"breach": objective = "DISABLE SECURITY SCOUT" if remaining()>0 else "REACH CONTROL SECTOR"
 		"blackout": objective = "POWER RESTORED · REACH LIFT" if power_restored else "FIND BACKUP POWER / SOUTHWEST BAY"
 		_: objective = "CORE SECURED · EXTRACT" if core_collected else "DATA CORE REQUIRED · PANEL OR GUARD ALERT"
 	if mission.get("id","")!="breach" and planar_distance(player.global_position,mission.panel)<=1.7: objective += " | PANEL OFF" if panel_disabled else " | E · USE PANEL"
-	var prompt: String = systems.prompt() if systems else ""
+	var nearby_pickup := nearby_pickup()
+	var prompt: String = ("E / " + str(nearby_pickup.label)) if not nearby_pickup.is_empty() else (systems.prompt() if systems else "")
 	if prompt!="": objective += " | "+prompt
 	status.text = objective
 	var warnings: Array[String] = []
@@ -590,3 +614,89 @@ func _update_hud() -> void:
 	if tutorial_text:
 		tutorial_text.visible = hud.visible
 		tutorial_text.text = tutorial_steps[tutorial_index] if tutorial_active else message if message_left>0 else ""
+
+func reset_inventory() -> void:
+	weapon_id = "pistol"
+	weapon_ammo = {"pistol":{"magazine":WeaponDefs.DATA.pistol.capacity,"reserve":WeaponDefs.DATA.pistol.reserve}}
+	ammo = WeaponDefs.DATA.pistol.capacity
+	if player and player.weapon: player.weapon.equip(weapon_id)
+
+func switch_weapon(id: String) -> void:
+	if not active or get_tree().paused or not weapon_ammo.has(id) or id == weapon_id: return
+	weapon_ammo[weapon_id].magazine = ammo
+	reload_remaining = 0
+	flash = 0
+	var previous := weapon_id
+	weapon_id = id
+	ammo = int(weapon_ammo[id].magazine)
+	player.weapon.equip(id)
+	player.muzzle.hide()
+	player.muzzle_light.light_energy = 0
+	player.weapon.pose(0,0,get_weapon_def().reload,get_weapon_def().recoil)
+	register_event("weapon_switched",previous + "->" + id)
+
+func make_pickups() -> void:
+	if is_instance_valid(pickup_nodes): pickup_nodes.free()
+	pickup_nodes = Node3D.new()
+	pickup_nodes.name = "WeaponPickups"
+	add_child(pickup_nodes)
+	var locations: Array = [
+		[Vector3(5,0,4),Vector3(6,0,4)],
+		[Vector3(5,0,17),Vector3(5,0,15)],
+		[Vector3(5,0,3),Vector3(3,0,5)]
+	][mission_index]
+	pickups = [
+		{"id":"smg","label":"PICK UP SMG / 2 TO EQUIP","position":locations[0],"taken":false},
+		{"id":"supply","label":"TAKE AMMUNITION","position":locations[1],"taken":false}
+	]
+	for item: Dictionary in pickups:
+		var prop := Node3D.new()
+		prop.position = item.position + Vector3(0,0.75,0)
+		pickup_nodes.add_child(prop)
+		if item.id == "smg":
+			var model: Node3D = load("res://assets/weapons/security_smg.glb").instantiate()
+			model.scale = Vector3.ONE * 0.8
+			prop.add_child(model)
+		else:
+			var mesh := MeshInstance3D.new()
+			var box := BoxMesh.new()
+			box.size = Vector3(0.3,0.2,0.25)
+			mesh.mesh = box
+			var material := StandardMaterial3D.new()
+			material.albedo_color = Color("ac8750")
+			mesh.material_override = material
+			prop.add_child(mesh)
+		var label := Label3D.new()
+		label.text = "SMG" if item.id == "smg" else "AMMO"
+		label.position.y = 0.4
+		label.font_size = 24
+		label.pixel_size = 0.0012
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		prop.add_child(label)
+		item.node = prop
+
+func nearby_pickup() -> Dictionary:
+	if not player: return {}
+	for item: Dictionary in pickups:
+		var target: Vector3 = item.position + Vector3(0,1.0,0)
+		if not item.taken and player.camera.global_position.distance_to(target) <= 1.6 and has_los(player.camera.global_position,target):
+			return item
+	return {}
+
+func collect_pickup() -> bool:
+	if not active or get_tree().paused: return false
+	var item := nearby_pickup()
+	if item.is_empty(): return false
+	item.taken = true
+	item.node.hide()
+	if item.id == "smg":
+		if not weapon_ammo.has("smg"):
+			weapon_ammo.smg = {"magazine":WeaponDefs.DATA.smg.capacity,"reserve":WeaponDefs.DATA.smg.reserve}
+		announce("SMG SECURED / Press 2 to equip, 1 for pistol.")
+	else:
+		for id in weapon_ammo:
+			weapon_ammo[id].reserve += 24 if id == "pistol" else 48
+		announce("AMMUNITION SECURED")
+	register_event("weapon_pickup",item.id)
+	play_sound("use",item.position)
+	return true

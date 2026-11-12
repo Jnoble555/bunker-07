@@ -67,7 +67,7 @@ func _install_inputs() -> void:
 		"move_forward": [KEY_W, KEY_UP], "move_back": [KEY_S, KEY_DOWN],
 		"strafe_left": [KEY_A], "strafe_right": [KEY_D],
 		"turn_left": [KEY_LEFT], "turn_right": [KEY_RIGHT], "fire": [KEY_SPACE],
-		"crouch": [KEY_CTRL], "sprint": [KEY_SHIFT], "lean_left": [KEY_Q], "lean_right": [KEY_C],
+		"weapon_1": [KEY_1], "weapon_2": [KEY_2], "crouch": [KEY_CTRL], "sprint": [KEY_SHIFT], "lean_left": [KEY_Q], "lean_right": [KEY_C],
 		"reload": [KEY_R], "interact": [KEY_E], "pause": [KEY_ESCAPE, KEY_P], "retry": [KEY_F5]
 	}
 	for action in bindings:
@@ -104,7 +104,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not active or get_tree().paused:
 		return
-	for action in ["fire", "reload", "interact"]:
+	for action in ["fire", "reload", "interact", "weapon_1", "weapon_2"]:
 		if event.is_action_pressed(action):
 			if action == "fire":
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -400,3 +400,7 @@ func device_los(from: Vector3, to: Vector3) -> bool:
 			excluded.append(prop.get_rid())
 	query.exclude = excluded
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+func get_weapon_def() -> Dictionary:
+	return preload("res://scripts/weapon_definitions.gd").DATA.pistol

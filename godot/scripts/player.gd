@@ -103,9 +103,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not controller or not controller.active or get_tree().paused:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * float(controller.session.preferences.sensitivity))
-		pitch = clampf(pitch - event.relative.y * float(controller.session.preferences.sensitivity), deg_to_rad(-80), deg_to_rad(80))
-		camera.rotation.x = pitch
+		apply_look(event.relative)
 		if event.relative != Vector2.ZERO: controller.progress_tutorial("aim")
 
 func _physics_process(delta: float) -> void:
@@ -136,14 +134,16 @@ func _physics_process(delta: float) -> void:
 	camera.position = eye + Vector3(lean, 0, 0)
 	camera.rotation = Vector3(pitch, 0, -lean * 0.22)
 	camera.fov = lerpf(camera.fov, 58.0 if aiming else rad_to_deg(2 * atan(0.68)), minf(1, delta * 14))
-	# Raise the sidearm during the existing .8s reload so the magazine stays visible.
+	# Raise the weapon during its defined reload so the magazine stays visible.
 	var reload_offset: float = 0.0
 	if controller.reload_remaining > 0:
-		var progress: float = 1.0 - controller.reload_remaining / 0.8
+		var progress: float = 1.0 - controller.reload_remaining / controller.get_weapon_def().reload
 		reload_offset = (progress / 0.25 if progress < 0.25 else (1.0 - progress) / 0.75) * -0.07
 	var sway: float = sin(controller.elapsed * 10) * 0.012 if input.length() > 0 else 0.0
 	weapon.position = Vector3(0.14 + sway, -0.07 - reload_offset, -0.65 + controller.flash * 0.8)
-	weapon.pose(controller.flash, controller.reload_remaining)
+	weapon.pose(controller.flash, controller.reload_remaining, controller.get_weapon_def().reload, controller.get_weapon_def().recoil)
+	muzzle.position = controller.get_weapon_def().muzzle
+	muzzle_light.position = muzzle.position
 	muzzle.visible = controller.flash > 0
 	muzzle_light.light_energy = 1.3 if controller.flash > 0 else 0.0
 
@@ -229,3 +229,8 @@ func clear_held_inputs() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		clear_held_inputs()
+
+func apply_look(relative: Vector2) -> void:
+	rotate_y(-relative.x * float(controller.session.preferences.sensitivity))
+	pitch = clampf(pitch - relative.y * float(controller.session.preferences.sensitivity), deg_to_rad(-80), deg_to_rad(80))
+	camera.rotation.x = pitch

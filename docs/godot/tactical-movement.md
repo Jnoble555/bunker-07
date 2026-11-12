@@ -25,3 +25,5 @@ Actual verification on Godot 4.7.2 / Windows Compatibility:
 - Existing saved JSON reports remain historical; new executed results above are distinguished from them.
 
 Remaining manual checks: prolonged mouse-driven campaign feel, unusual staircase corners/steep transitions, camera roll comfort, other frame rates/drivers and non-default window aspect ratios. No inventory or enemy-expansion work is included.
+
+Inventory milestone follow-up: the pitch test now calls the shared clamping math directly in headless mode and explicitly skips captured-mouse handler coverage there. A separate graphical check dispatches a synthetic mouse event only when mouse capture is available. See [current inventory verification](weapon-inventory.md) for the separately recorded results.

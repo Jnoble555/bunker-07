@@ -43,8 +43,17 @@ func run() -> void:
 	p.clear_held_inputs()
 	var mouse := InputEventMouseMotion.new()
 	mouse.relative = Vector2(0,-10000)
-	p._unhandled_input(mouse)
-	check("mouse pitch clamps at eighty degrees",is_equal_approx(p.pitch,deg_to_rad(80)))
+	p.apply_look(mouse.relative)
+	var upper_clamped: bool = is_equal_approx(p.pitch,deg_to_rad(80))
+	p.apply_look(Vector2(0,20000))
+	check("pitch math clamps at both eighty-degree limits",upper_clamped and is_equal_approx(p.pitch,deg_to_rad(-80)))
+	if DisplayServer.get_name() != "headless" and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		p.pitch = 0
+		Input.parse_input_event(mouse)
+		await frames(2)
+		check("captured mouse handler clamps pitch",is_equal_approx(p.pitch,deg_to_rad(80)))
+	else:
+		print("SKIP captured mouse handler: captured graphical mouse unavailable")
 	p.pitch = 0
 	p.global_position = Vector3(100,0,105)
 	var wall = game.box("LeanWall",Vector3(100.5,1.4,105),Vector3(0.2,2.8,2))

@@ -24,8 +24,9 @@ Replace the executable path on another machine; add `--editor` to open the edito
 | Q / C (hold) | Lean left / right, constrained by obstacles |
 | Right mouse (hold) | Aim with reduced FOV and speed |
 | Click / Space | Fire |
-| R | Timed reload |
-| E | Use nearby panel/device |
+| R | Reload from finite reserve |
+| 1 / 2 | Owned pistol / SMG |
+| E | Use nearby panel/device or collect weapon/ammo |
 | J | Open paused field journal |
 | P / Esc | Pause/resume; return from submenus |
 | F5 | Retry current mission |
@@ -75,3 +76,9 @@ The native movement milestone deliberately expands the browser reference with gr
 ```
 The separate lab has low cover ahead, a headroom bay on the left, and a ramp/stairs on the right. F5 resets it. It cannot commit campaign extraction progress. Campaign launch remains F5 from the main project (Start Campaign, Deploy).
 See [movement verification](../docs/godot/tactical-movement.md).
+
+## Two-weapon inventory
+
+Each mission and retry starts with the pistol (8 loaded, 40 reserve) and restores its optional SMG and one ammunition supply. Inventory does not carry between missions. E collects; 1/2 selects owned weapons. Switching cancels a reload without transferring ammunition; only a completed reload moves missing rounds from reserve into the magazine. The SMG is automatic; the pistol fires once per press.
+
+See [weapon inventory rules, assets and verification](../docs/godot/weapon-inventory.md).

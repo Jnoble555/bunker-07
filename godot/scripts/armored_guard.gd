@@ -5,9 +5,9 @@ extends CharacterBody3D
 class GuardHitTarget extends Area3D:
 	var guard: Node
 
-	func receive_hit() -> void:
+	func receive_hit(damage_amount: int = 1) -> void:
 		if is_instance_valid(guard):
-			guard.call("receive_hit")
+			guard.call("receive_hit", damage_amount)
 
 const MAX_HP: int = 3
 const PATROL_SPEED: float = 0.84
@@ -100,10 +100,10 @@ func reset_guard() -> void:
 		_update_pose(0.0)
 
 
-func receive_hit() -> void:
+func receive_hit(damage_amount: int = 1) -> void:
 	if hp <= 0 or controller == null or not bool(controller.get("active")) or get_tree().paused:
 		return
-	hp -= 1
+	hp -= damage_amount
 	stagger = _stagger_duration
 	attack_windup = 0.0
 	controller.call("register_event", "guard_hit", str(hp))
