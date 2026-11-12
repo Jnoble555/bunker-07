@@ -6,8 +6,8 @@ The browser source remains the behavioral reference. M1 was planned and implemen
 
 | Area | Implemented and exercised | Remaining limits |
 | --- | --- | --- |
-| Movement/aim | Normalized reference speed, wall collision, mouse/arrow yaw, sensitivity preferences, horizontal FOV | No gamepad/mobile input; no jump/pitch, matching reference |
-| Weapon/combat | Eight rounds, .24s cooldown, .8s reload, wall/target hit precedence, .28-tile enemy shot tolerance, windup/stagger/cancellation, recoil/flash/sparks/hit/damage feedback | Native collision volume edge behavior and visual effects differ from 2D rendering |
+| Movement/aim | Full clamped mouse pitch/yaw, grounded ramps/stairs, crouch clearance, sprint, collision-aware lean, aiming zoom, sensitivity preferences | Native movement expands the browser reference; no jump/gamepad/mobile input |
+| Weapon/combat | Pistol and collectible SMG with independent finite ammunition, weapon-specific timing/spread, camera-directed vertical shot occlusion, windup/stagger/cancellation, recoil/flash/sparks/hit/damage feedback | Native collision volume edge behavior and visual effects differ from 2D rendering |
 | Security/enemies | Armored/scout/turret roles, guard patrol/investigation, camera sweep/cone/LOS/tracking, single reinforcement | No full human combat campaign or long-session performance certification |
 | Devices | Shootable camera/lamp, power-camera-light tradeoff, live bulkhead collision/LOS and actor obstruction, one-use LOS overload | Bulkhead toggles a full grid cell instantly, as reference; no sliding animation |
 | Objectives | All reference maps/spawns, Breach bot gate, Control Room alarm/core/gate/extraction, Blackout power/extraction | No native binary/web export produced |
@@ -21,3 +21,7 @@ The browser source remains the behavioral reference. M1 was planned and implemen
 46 retained mechanic checks and 51 independently authored campaign checks execute real Godot physics. Route tests isolate enemies; separate checks enable combat/detection. Rendered smoke captures use scripted transitions for views and validate actual Blackout power use and summary, not human completion times. The exit cleanup regression has a separate active-audio close test.
 
 See [campaign-release.md](campaign-release.md) for exact commands, final outcomes, original asset provenance and current release status. Browser code/tests/styles/entry page are unchanged by this migration. There are no known blocking defects within tested scope; that is not a guarantee of zero bugs.
+
+## Separate tactical expansion
+
+[Operation Iron Relay](tactical-pve-expansion.md) adds armed SMG/rifle patrols, cover/search/navigation, a larger authored operation, and an original Blender shotgun under slot 3. This is an intentional native expansion, separate from reference-campaign parity. See that report for fresh test results, integrated screenshots and manual limits. Checkpoint saves and sight alignment are deferred; current aiming is zoom. Historical migration results above remain historical.

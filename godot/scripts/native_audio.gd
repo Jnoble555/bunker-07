@@ -8,6 +8,7 @@ const RATE: int = 22050
 const SOUNDS: Dictionary = {
 	"fire": [720.0, 155.0, 0.12, 0.24],
 	"smg_fire": [1050.0, 90.0, 0.075, 0.19],
+	"shotgun_fire": preload("res://scripts/shotgun_sound.gd").SPEC,
 	"hit": [190.0, 48.0, 0.18, 0.22],
 	"reload": [880.0, 310.0, 0.18, 0.10],
 	"detect": [510.0, 1030.0, 0.22, 0.10],

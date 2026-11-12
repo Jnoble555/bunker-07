@@ -2,6 +2,8 @@
 
 A **three-mission Godot campaign preview** is available in [`godot/`](godot/README.md), including reactive security, tactical devices, optional objectives and campaign consequences. The browser version below remains the behavioral reference. See [native parity and limits](docs/godot/parity.md) and [release verification](docs/godot/campaign-release.md).
 
+The native version also includes **Operation Iron Relay**, a separate tactical PvE operation with armed patrols, alternate routes, an elevated archive and a collectible shotgun. See [launch instructions, screenshots and verification](docs/godot/tactical-pve-expansion.md). This operation runs in Godot; the browser link below plays the existing browser campaign.
+
 ### [▶ Play Bunker 07 in your browser](https://jnoble555.github.io/bunker-07/)
 
 **No download or installation required.** Open the game in a desktop browser and choose **Start Campaign**.

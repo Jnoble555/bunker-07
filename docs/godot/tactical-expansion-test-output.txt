@@ -1,0 +1,633 @@
+Fresh integration-owner executions for tactical PvE expansion. Godot 4.7.2 stable, Windows.
+Editor import and close smoke also exited 0; component-owner/reviewer tests are attributed separately.
+
+=== .expansion-milestone_test.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS fresh run health, magazine and active state
+PASS camera horizontal field of view matches browser
+PASS world blocks sight across maintenance partition
+PASS direct hallway has unobstructed sight
+PASS real player collision prevents crossing partition
+PASS diagonal movement is normalized
+PASS arrow aim rotates player
+PASS pause action reaches menu while game is active
+PASS pause action resumes through always-processing controller
+PASS hitscan damages armored guard and rewards hit
+PASS hit interrupts attack and applies armored stagger
+PASS hit and muzzle feedback begin
+PASS shot cooldown rejects immediate second fire
+PASS three successful hits disable representative enemy
+PASS disabled guard no longer intercepts or rewards shots
+PASS grazing shot preserves reference .28 tile hit tolerance
+PASS shots inside nonblocking enemy hurtbox still hit
+PASS overlapping enemy behind camera is not a target
+PASS wall occludes actual weapon shot
+PASS reload starts without instantly refilling
+PASS reload blocks firing
+PASS pause freezes reload and active clock
+PASS pause does not queue a delayed shot
+PASS reload completes to eight rounds after resume
+PASS panel refuses interaction beyond .85 tile
+PASS panel disables within .85 tile
+PASS disabled panel prevents later alarm
+PASS repeat interaction remains disabled
+PASS nearby alerted guard starts attack windup
+PASS pause freezes enemy windup
+PASS completed armored attack deals eighteen damage
+PASS breaking sight cancels timed attack
+PASS stagger cancels pending attack immediately
+PASS guard facing and continuous sight trigger alarm
+PASS alerted guard chases within visible hall
+PASS panel silences alarm without undoing trigger history
+PASS partition prevents guard detection
+PASS core stays locked before alarm or panel
+PASS core gate blocks physical sight before pickup
+PASS unlocked core pickup opens gate
+PASS core extraction completes partial milestone
+PASS retry resets all included encounter state
+PASS collision-driven route reaches usable maintenance panel
+PASS complete maintenance route crosses opened gate and extracts
+PASS successful result exposes campaign rank and continuation
+PASS retry after extraction restores closed gate
+NATIVE MILESTONE CHECKS: 46 passed, 0 failed
+
+=== .expansion-campaign_test.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS campaign begins with Breach briefing
+PASS Breach uses reference spawn and scout
+PASS Breach onboarding follows move aim fire reload and persists
+PASS Breach exit remains locked with living bot
+PASS bot disable analytics contain current hit count and numeric target
+PASS Breach collision route clears after scout disabled
+PASS Continue opens Control Room briefing
+PASS Control Room starts clean with armored patrol
+PASS camera visible tracking triggers alarm
+PASS alarm deploys exactly one scout reinforcement
+PASS repeated alarm does not duplicate reinforcement
+PASS camera cannot detect through partition
+PASS service power isolates camera and dims real lighting
+PASS isolated camera cannot trigger alarm
+PASS shooting camera disables it and rewards hit
+PASS wall blocks device hit
+PASS service lamp can be destroyed
+PASS bulkhead closes and blocks LOS
+PASS bulkhead reopens from switch
+PASS bulkhead refuses to close on living actor
+PASS one-use overload staggers visible enemy and cancels windup
+PASS spent overload cannot apply a second stagger
+PASS optional intel raises alarm and is provisional
+PASS failed run does not commit optional intel or alarm
+PASS retry clears provisional device state and counts retry
+PASS hidden cache restores 25 health only once
+PASS disabled panel makes optional intel quiet
+PASS optional rewards stay provisional before extraction
+PASS Control Room collision route commits quiet security and optional finds
+PASS fast accurate optional quiet route earns S rank
+PASS Continue opens Blackout briefing
+PASS quiet shutdown disables later turret
+PASS successful intel journal survives mission transition
+PASS Blackout extraction requires restored power
+PASS Blackout power switch restores power
+PASS Blackout collision route reaches complete campaign summary
+PASS new campaign clears decisions and keeps session events
+PASS committed alarm adds armored Blackout pursuer
+PASS turret role has stationary ranged combat
+PASS turret attacks at range without moving
+PASS pause freezes device tracking and active time
+PASS journal pauses game and shows recovered text
+PASS in-run settings pause simulation
+PASS settings return preserves paused encounter
+PASS native preferences persist and reload
+PASS settings reset restores native defaults
+PASS CSV preserves browser schema and mission data
+PASS CSV quotes commas quotes and newlines
+PASS device CSV target and detail match browser column semantics
+PASS panel CSV preserves panel ID and alarm outcome
+PASS CSV export writes actual session file
+CAMPAIGN CHECKS: 51 passed, 0 failed
+
+=== .expansion-inventory_test.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS starts pistol only with finite reserve
+PASS distance prevents remote pickup
+PASS obstacle blocks pickup
+PASS E acquires SMG without changing current weapon
+PASS switch preserves independent pistol ammo
+PASS reload interruption neither transfers nor loses ammo
+PASS pause freezes reload
+PASS reload consumes only missing reserve
+PASS automatic timing bounded by interval
+PASS pistol does not repeat held fire
+PASS finite supply grants ammunition once
+PASS pause rejects weapon switching
+PASS empty ammo and reserve cannot fire or reload
+PASS retry resets weapons ammo and pickups
+PASS mission transition uses fresh pistol inventory
+PASS pickup and switch analytics recorded compatibly
+INVENTORY 16/16 failures=0
+
+=== .expansion-tactical_movement_test.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS crouch uses short capsule
+PASS headroom prevents standing
+PASS clearance restores standing
+PASS pitch does not lift horizontal movement
+PASS held sprint increases speed
+PASS aim narrows FOV and slows movement
+PASS crouch slows movement
+PASS pitch math clamps at both eighty-degree limits
+SKIP captured mouse handler: captured graphical mouse unavailable
+PASS lean sweep stops camera before wall
+PASS stairs lift grounded player
+PASS ramp lifts grounded player
+PASS camera-directed vertical shot hits elevated target
+PASS solid geometry occludes vertical shot
+PASS interaction and enemy sight respect elevated obstacle
+PASS pause freezes camera pose
+PASS pause clears held tactical inputs
+PASS retry restores pitch crouch lean aim
+TACTICAL failures: 0
+
+=== .expansion-movement-graphical.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 4.6 (Core Profile) Mesa 26.3.0-devel (git-e3fc7749c6) - Compatibility - Using Device: Microsoft - D3D12 (Qualcomm(R) Adreno(TM) X1-85 GPU)
+
+PASS crouch uses short capsule
+PASS headroom prevents standing
+PASS clearance restores standing
+PASS pitch does not lift horizontal movement
+PASS held sprint increases speed
+PASS aim narrows FOV and slows movement
+PASS crouch slows movement
+PASS pitch math clamps at both eighty-degree limits
+PASS captured mouse handler clamps pitch
+PASS lean sweep stops camera before wall
+PASS stairs lift grounded player
+PASS ramp lifts grounded player
+PASS camera-directed vertical shot hits elevated target
+PASS solid geometry occludes vertical shot
+PASS interaction and enemy sight respect elevated obstacle
+PASS pause freezes camera pose
+PASS pause clears held tactical inputs
+PASS retry restores pitch crouch lean aim
+TACTICAL failures: 0
+
+=== .expansion-integration.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 4.6 (Core Profile) Mesa 26.3.0-devel (git-e3fc7749c6) - Compatibility - Using Device: Microsoft - D3D12 (Qualcomm(R) Adreno(TM) X1-85 GPU)
+
+PASS operation menu retains original campaign entry
+PASS operation briefing identifies objective sequence
+PASS operation spawns distinct armed roles
+PASS operation entry SMG is collectible
+PASS real slot-two event reaches campaign override
+PASS real slot-one event restores independent pistol state
+PASS clearing all enemies cannot skip access and data at extraction
+PASS complete access approach uses real player collision
+PASS access interaction advances stage and opens gate
+PASS archive requires its elevated approach
+PASS optional armory route traverses to shotgun
+PASS risk side room grants shotgun
+PASS real slot-three event equips shotgun
+PASS shotgun switch cancels reload without ammunition transfer
+PASS alternate maintenance route reaches archive
+PASS archive collection advances extraction objective
+PASS stairs and lift complete objective route
+PASS ordered objective path completes standalone operation
+PASS multi-pellet accuracy cannot exceed one hundred percent
+PASS retry resets operation gate objectives inventory and pickups
+PASS pause freezes operation clock
+PASS death produces retryable failure
+PASS death retry restores health and complete encounter
+OPERATION CHECKS 23/23 failures=0
+
+=== .expansion-menu.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 4.6 (Core Profile) Mesa 26.3.0-devel (git-e3fc7749c6) - Compatibility - Using Device: Microsoft - D3D12 (Qualcomm(R) Adreno(TM) X1-85 GPU)
+
+PASS title exposes tactical operation
+PASS operation menu loads through title entry
+PASS operation deploy button starts operation
+PASS original campaign menu remains available
+PASS original campaign still deploys original Breach scout
+MENU CHECKS 5/5 failures=0
+
+=== .expansion-combat.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 4.6 (Core Profile) Mesa 26.3.0-devel (git-e3fc7749c6) - Compatibility - Using Device: Microsoft - D3D12 (Qualcomm(R) Adreno(TM) X1-85 GPU)
+
+PASS live armed unit visibly prepares before firing
+PASS cover appearing during preparation prevents live damage
+PASS lost-sight search retains remembered location
+PASS reacquired target takes actual ray damage
+PASS live bursts exhaust magazine and enter reload
+PASS pause freezes enemy reload and player clock
+PASS live enemy completes finite reload
+OPERATION LIVE COMBAT 7/7 failures=0
+
+=== .expansion-browser.log ===
+
+> test
+> node tests/playtest.cjs && node tests/next-level-test.cjs && node tests/paths-test.cjs
+
+{
+  "checks": [
+    {
+      "name": "core gate closed",
+      "ok": true
+    },
+    {
+      "name": "maintenance route",
+      "ok": true
+    },
+    {
+      "name": "panel prevents alarm",
+      "ok": true
+    },
+    {
+      "name": "core collected opens gate",
+      "ok": true
+    },
+    {
+      "name": "stealth extraction",
+      "ok": true
+    },
+    {
+      "name": "direct route",
+      "ok": true
+    },
+    {
+      "name": "broken sight resets detection",
+      "ok": true
+    },
+    {
+      "name": "alarm reinforcement once",
+      "ok": true
+    },
+    {
+      "name": "no duplicate reinforcement",
+      "ok": true
+    },
+    {
+      "name": "silence preserves reinforcement",
+      "ok": true
+    },
+    {
+      "name": "armored bot takes three hits and is killed",
+      "ok": true
+    },
+    {
+      "name": "attack windup",
+      "ok": true
+    },
+    {
+      "name": "armored attack damage",
+      "ok": true
+    },
+    {
+      "name": "mission renders breach",
+      "ok": true
+    },
+    {
+      "name": "mission renders control-room",
+      "ok": true
+    },
+    {
+      "name": "mission renders blackout",
+      "ok": true
+    },
+    {
+      "name": "maintenance collision traversal and extraction",
+      "ok": true
+    },
+    {
+      "name": "direct collision traversal and alarm extraction",
+      "ok": true
+    },
+    {
+      "name": "keyboard reload completes",
+      "ok": true
+    },
+    {
+      "name": "pause UI",
+      "ok": true
+    },
+    {
+      "name": "campaign briefing UI",
+      "ok": true
+    },
+    {
+      "name": "pause hides tutorial",
+      "ok": true
+    },
+    {
+      "name": "pause settings UI",
+      "ok": true
+    },
+    {
+      "name": "resume restores HUD controls tutorial",
+      "ok": true
+    },
+    {
+      "name": "reload blocks firing",
+      "ok": true
+    },
+    {
+      "name": "tutorial completion persisted",
+      "ok": true
+    },
+    {
+      "name": "retry resets mission and counts attempt",
+      "ok": true
+    },
+    {
+      "name": "continue opens next briefing",
+      "ok": true
+    },
+    {
+      "name": "control room starts clean",
+      "ok": true
+    },
+    {
+      "name": "blackout exit locked before power",
+      "ok": true
+    },
+    {
+      "name": "blackout cannot exit unpowered",
+      "ok": true
+    },
+    {
+      "name": "blackout power use",
+      "ok": true
+    },
+    {
+      "name": "campaign summary after final exit",
+      "ok": true
+    },
+    {
+      "name": "new campaign preserves session events",
+      "ok": true
+    },
+    {
+      "name": "escaping windup avoids damage",
+      "ok": true
+    },
+    {
+      "name": "CSV quotes special fields",
+      "ok": true
+    },
+    {
+      "name": "settings survive reload",
+      "ok": true
+    },
+    {
+      "name": "settings reset defaults",
+      "ok": true
+    },
+    {
+      "name": "CSV download includes mission and combat",
+      "ok": true
+    },
+    {
+      "name": "storage and audio unavailable remain playable",
+      "ok": true
+    },
+    {
+      "name": "late pointer capture released on menu",
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "averageRenderMs": 4.7766666666643385
+}
+{
+  "checks": [
+    {
+      "name": "reactive systems module loads",
+      "ok": true
+    },
+    {
+      "name": "control room starts without optional rewards",
+      "ok": true
+    },
+    {
+      "name": "control guard has armored role",
+      "ok": true
+    },
+    {
+      "name": "unalerted guard patrols",
+      "ok": true
+    },
+    {
+      "name": "camera detects exposed player",
+      "ok": true
+    },
+    {
+      "name": "camera cannot detect through separating wall",
+      "ok": true
+    },
+    {
+      "name": "power terminal is interactable",
+      "ok": true
+    },
+    {
+      "name": "routing power disables camera and dims room",
+      "ok": true
+    },
+    {
+      "name": "disabled camera cannot raise alarm",
+      "ok": true
+    },
+    {
+      "name": "camera shot intercepts before wall",
+      "ok": true
+    },
+    {
+      "name": "camera shot disables camera",
+      "ok": true
+    },
+    {
+      "name": "device hits reward accuracy and hit feedback",
+      "ok": true
+    },
+    {
+      "name": "nearer enemy occludes camera shot",
+      "ok": true
+    },
+    {
+      "name": "wall occludes device shot",
+      "ok": true
+    },
+    {
+      "name": "lamp can be shot",
+      "ok": true
+    },
+    {
+      "name": "door switch toggles",
+      "ok": true
+    },
+    {
+      "name": "closed door blocks collision and rays",
+      "ok": true
+    },
+    {
+      "name": "door reopens without permanent trap",
+      "ok": true
+    },
+    {
+      "name": "door refuses close on living actor",
+      "ok": true
+    },
+    {
+      "name": "terminal overload interaction",
+      "ok": true
+    },
+    {
+      "name": "overload staggers nearby visible enemies and cancels attack",
+      "ok": true
+    },
+    {
+      "name": "optional intel can be recovered",
+      "ok": true
+    },
+    {
+      "name": "intel exposes player to alarm risk",
+      "ok": true
+    },
+    {
+      "name": "secret cache gives one-time reward",
+      "ok": true
+    },
+    {
+      "name": "successful stealth commits campaign decisions",
+      "ok": true
+    },
+    {
+      "name": "security shutdown disables later turret",
+      "ok": true
+    },
+    {
+      "name": "failed retry preserves committed decisions",
+      "ok": true
+    },
+    {
+      "name": "alarm consequence adds later armored opposition",
+      "ok": true
+    },
+    {
+      "name": "new campaign clears prior decisions",
+      "ok": true
+    },
+    {
+      "name": "baseline turret is stationary ranged role",
+      "ok": true
+    },
+    {
+      "name": "all encounter prop assets exist",
+      "ok": true
+    },
+    {
+      "name": "broken lamp asset exists",
+      "ok": true
+    },
+    {
+      "name": "gunfire starts last-heard investigation",
+      "ok": true
+    },
+    {
+      "name": "investigating guard moves along route",
+      "ok": true
+    },
+    {
+      "name": "hits damage and stagger armored enemy",
+      "ok": true
+    },
+    {
+      "name": "impacts produce wall-clipped feedback sprites",
+      "ok": true
+    },
+    {
+      "name": "turret attacks at range without moving",
+      "ok": true
+    },
+    {
+      "name": "damage records attacker direction",
+      "ok": true
+    },
+    {
+      "name": "ranged windup cancels behind walls",
+      "ok": true,
+      "detail": {
+        "hp": 100,
+        "windup": 0,
+        "roles": [
+          "turret"
+        ]
+      }
+    },
+    {
+      "name": "rank rewards fast accurate optional stealth run",
+      "ok": true
+    },
+    {
+      "name": "summary exposes rank and optional rewards",
+      "ok": true
+    },
+    {
+      "name": "story log contains durable field entries",
+      "ok": true
+    },
+    {
+      "name": "retry resets devices and provisional rewards",
+      "ok": true
+    },
+    {
+      "name": "grouped billboard clips nearer wall stripe without hiding visible stripe",
+      "ok": true
+    },
+    {
+      "name": "billboard clipping does not leak into following drawing",
+      "ok": true
+    },
+    {
+      "name": "new visuals render breach",
+      "ok": true
+    },
+    {
+      "name": "new visuals render control-room",
+      "ok": true
+    },
+    {
+      "name": "new visuals render blackout",
+      "ok": true
+    },
+    {
+      "name": "full optional maintenance route traverses to extraction",
+      "ok": true
+    },
+    {
+      "name": "optional route reports S rank",
+      "ok": true
+    },
+    {
+      "name": "direct alarm route remains traversable",
+      "ok": true
+    },
+    {
+      "name": "J opens field journal and pauses gameplay",
+      "ok": true
+    },
+    {
+      "name": "journal round trip restores playable HUD",
+      "ok": true
+    }
+  ],
+  "errors": []
+}
+PASS local game
+PASS GitHub Pages subdirectory
+PASS local comparison fixture
