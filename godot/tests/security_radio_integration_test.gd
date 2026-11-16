@@ -126,6 +126,17 @@ func run()->void:
 	var newer:Vector3=recipient.last_known
 	step(.7)
 	check("older radio cannot overwrite recipient's newer direct knowledge",heard().size()==1 and recipient.last_known==newer and recipient.last_known!=original)
+	await fresh(Vector3(27,0,26))
+	recipient._physics_process(.016)
+	var confident:Vector3=recipient.last_known
+	step(.5)
+	game.player.global_position=A
+	await frames(3)
+	# Exercise supported lower-confidence visual evidence, backed by a real clear ray.
+	var uncertain:int=game.record_security_observation(sender,"visual_contact",game.player.camera.global_position,.9,8) if sender.can_see_player() else 0
+	game.queue_security_radio(sender,uncertain)
+	step(1.4)
+	check("newer but less reliable radio cannot overwrite active direct sighting",heard().size()==1 and recipient.last_known==confident and heard()[0].confidence==.9)
 	await fresh()
 	report_id=start()
 	recipient.receive_hit(100)
