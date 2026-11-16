@@ -4,7 +4,7 @@ Phase 2 current results and the tested radio acceptance matrix are in [ghost-pro
 
 Phase 1 implements a real passive director and two SceneTree test programs. The automation results below describe executed checks; the later behavior matrix remains future work. No mock radio/planner or existing regression assertion changes were introduced.
 
-## Future behavior acceptance matrix (not implemented or executed)
+## Original behavior acceptance matrix
 
 | Case | Fixture / stimulus | Required assertion |
 | --- | --- | --- |
@@ -20,6 +20,10 @@ Phase 1 implements a real passive director and two SceneTree test programs. The 
 | Replay | Same seed, observations and fixture; vary registration order | Identical canonical reports/roles/destinations/events; different seeds remain valid |
 
 `godot/tests/security_director_test.gd` now tests the actual passive recorder, using existing `check`, printed totals and nonzero `quit` convention. Future communication/assignment tests should extend coverage when those implementations exist. Assert state and event contents, not only logs or existence of files. Do not weaken current regression assertions.
+
+## Phase 3 executed coverage
+
+`security_search_integration_test.gd` exercises actual SECURITY actors in the authored room. It verifies delayed assignment, provenance, two roles and separated reservations, reachable paths, deterministic replay, hidden-position invariance, physical arrivals, firing occlusion, reacquisition, delayed supersession, sight-episode deduplication, fallback, pause and lifecycle. It also records a bounded eight-guard performance sample. The original Phase 2 suites continue to verify radio delivery priority, the real pistol interruption and attempt isolation. See the [Phase 3 report](ghost-protocol-search.md) for encounters A–E, measured timings and remaining playtesting.
 
 ## Integration and regression
 

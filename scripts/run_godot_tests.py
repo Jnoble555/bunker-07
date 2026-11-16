@@ -9,6 +9,7 @@ import tempfile
 SUITES = (
     "security_director_test", "security_director_integration_test",
     "security_radio_test", "security_radio_integration_test",
+    "security_search_integration_test",
     "deep_signal_enemy_test", "tactical_enemy_test", "operation_level_test",
     "operation_combat_test", "tactical_movement_test", "tactical_operation_test",
     "operation_integration_test", "operation_menu_test", "inventory_test",

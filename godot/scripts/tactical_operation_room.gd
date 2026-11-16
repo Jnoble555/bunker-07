@@ -126,3 +126,76 @@ func tactical_path(from: Vector3, to: Vector3) -> Array[Vector3]:
 	for point in navigation.get_point_path(start,end): path.append(point)
 	if not path.is_empty(): path.append(destination)
 	return path
+
+## Select a bounded set around historical evidence using the existing navigation graph.
+func security_search_position(role: String, from: Vector3, other: Vector3, evidence: Vector3,
+		reserved: Vector3, travel_budget: float, rng: RandomNumberGenerator) -> Dictionary:
+	if not from.is_finite() or not evidence.is_finite(): return {}
+	var candidates: Array[Vector3] = []
+	var sighting := Vector3(evidence.x, height_at(evidence), evidence.z)
+	if role == "investigator":
+		for offset: Vector3 in [Vector3.ZERO, Vector3(1.5,0,0), Vector3(-1.5,0,0),
+				Vector3(0,0,1.5), Vector3(0,0,-1.5), Vector3(1.5,0,1.5),
+				Vector3(1.5,0,-1.5), Vector3(-1.5,0,1.5), Vector3(-1.5,0,-1.5)]:
+			var point := sighting + offset
+			point.y = height_at(point)
+			if absf(point.y - sighting.y) < .5: candidates.append(point)
+	else:
+		# Cover is already authored as walkable offsets. Pick the nearest six in range.
+		for point in cover_points:
+			if absf(point.y - sighting.y) < .5 and point.distance_to(sighting) <= 8:
+				candidates.append(point)
+		candidates.sort_custom(func(a: Vector3, b: Vector3) -> bool:
+			var da := from.distance_squared_to(a)
+			var db := from.distance_squared_to(b)
+			return a < b if da == db else da < db)
+		candidates.resize(mini(candidates.size(), 6))
+		candidates.append(Vector3(from.x, height_at(from), from.z))
+	var valid: Array[Dictionary] = []
+	var requests := 0
+	for index in candidates.size():
+		var point := candidates[index]
+		var distance := point.distance_to(sighting)
+		if role == "holder" and (distance < 2.7 or distance > 8): continue
+		if point.distance_to(reserved) < 2.2 or point.distance_to(other) < 1.35: continue
+		if not navigable(point) or from.distance_to(point) > travel_budget: continue
+		requests += 1
+		var path := security_search_path(from, point)
+		if path.is_empty() or not path[-1].is_equal_approx(point): continue
+		var length := 0.0
+		var previous := from
+		for waypoint in path:
+			length += previous.distance_to(waypoint)
+			previous = waypoint
+		if length > travel_budget: continue
+		var score := length * .55 + distance * .8
+		if role == "holder":
+			score = length * .55 + absf(distance - 4.5) * .75
+		valid.append({"destination": point, "path": path, "path_length": length,
+			"score": score, "index": index, "uses_cover": role == "holder" and cover_points.has(point)})
+	if valid.is_empty(): return {"path_requests": requests}
+	valid.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a.uses_cover != b.uses_cover: return a.uses_cover
+		return a.index < b.index if a.score == b.score else a.score < b.score)
+	var choices := mini(valid.size(), 3 if role == "investigator" else 1)
+	var selected := valid[rng.randi_range(0, choices - 1) if choices > 1 else 0]
+	selected.path_requests = requests
+	return selected
+
+func security_search_path(from: Vector3, to: Vector3) -> Array[Vector3]:
+	if not from.is_finite() or not to.is_finite(): return []
+	if absf(to.y - height_at(to)) > .05: return []
+	var path := tactical_path(from, to)
+	if path.size() < 2: return []
+	# The graph uses capsule-clear cardinal links. Check the off-grid connectors
+	# separately because tactical_path() can choose a node on the far side of cover.
+	if not _security_search_segment_clear(from, path[0]): return []
+	if not _security_search_segment_clear(path[-2], to): return []
+	return path
+
+func _security_search_segment_clear(from: Vector3, to: Vector3) -> bool:
+	var steps := maxi(1, ceili(from.distance_to(to) / .24))
+	for index in range(steps + 1):
+		var point := from.lerp(to, float(index) / steps)
+		if absf(point.y - height_at(point)) > .32 or not navigable(point): return false
+	return true

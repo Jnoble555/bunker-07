@@ -4,7 +4,7 @@ const OperationRoom = preload("res://scripts/tactical_operation_room.gd")
 const DeepSignalEnemy = preload("res://scripts/deep_signal_enemy.gd")
 const SecurityDirector = preload("res://scripts/security_director.gd")
 var security_director: RefCounted
-const SECURITY_RADIO_PARTNERS := {"security-smg":"security-rifle", "security-rifle":"security-smg"}
+const SECURITY_RADIO_PARTNERS := SecurityDirector.SECURITY_PARTNERS
 const SECURITY_RADIO_DELAY := 1.4
 var operation_mode := false
 var operation_stage := 0
@@ -234,6 +234,7 @@ func start_run() -> void:
 		security_director.telemetry_event.connect(_on_security_telemetry)
 		security_director.radio_report_changed.connect(_on_security_radio_changed)
 		security_director.radio_report_delivered.connect(_on_security_radio_delivered)
+		security_director.search_assignment_changed.connect(_on_security_search_assignment)
 		security_director.initialize_for_mission(str(mission.id),attempts)
 		_sync_security_radio()
 	register_event("mission_start","")
@@ -505,16 +506,20 @@ func _clear_security_director() -> void:
 	for enemy in enemies:
 		if is_instance_valid(enemy) and enemy.has_method("set_radio_transmitting"): enemy.set_radio_transmitting(0)
 	security_director.clear()
+	security_director.search_assignment_changed.disconnect(_on_security_search_assignment)
 	security_director.telemetry_event.disconnect(_on_security_telemetry)
 	security_director = null
 
 func _on_security_telemetry(event: String, detail: Dictionary) -> void:
-	register_event(event, JSON.stringify(detail), str(detail.get("observer_id", "")))
+	register_event(event, JSON.stringify(detail), str(detail.get("guard_id", detail.get("observer_id", ""))))
 
 func record_security_observation(enemy: Node, kind: String, at: Vector3, confidence: float, ttl: float) -> int:
 	if not security_director or not active or get_tree().paused: return 0
 	if not is_instance_valid(enemy) or not enemies.has(enemy) or enemy.hp <= 0: return 0
-	return security_director.record_observation(str(enemy.id), kind, at, confidence, ttl)
+	var metadata := {}
+	if kind == "visual_contact" and SECURITY_RADIO_PARTNERS.has(enemy.id):
+		metadata["sight_episode"] = enemy.get_sight_episode()
+	return security_director.record_observation(str(enemy.id), kind, at, confidence, ttl, "", metadata)
 
 func security_simulation_time() -> float:
 	return security_director.get_simulation_time() if security_director else elapsed
@@ -554,6 +559,11 @@ func queue_security_radio(enemy: Node, observation_id: int) -> int:
 func interrupt_security_radio(enemy: Node, reason: String) -> void:
 	if security_director and is_instance_valid(enemy) and enemies.has(enemy):
 		security_director.cancel_reports_from(str(enemy.id),reason)
+		interrupt_security_search(enemy, reason)
+
+func interrupt_security_search(enemy: Node, reason: String) -> void:
+	if not security_director or _security_enemy_by_id(enemy.id) != enemy: return
+	security_director.interrupt_search(enemy.id, reason)
 
 func _on_security_radio_changed(report: Dictionary) -> void:
 	if not security_director or report.attempt_id != attempts: return
@@ -570,7 +580,54 @@ func _on_security_radio_delivered(recipient_id: String, report: Dictionary) -> v
 	if not sender or not recipient or sender==recipient or sender.hp<=0 or recipient.hp<=0 or sender.stagger>0: return
 	if sender.is_queued_for_deletion() or recipient.is_queued_for_deletion(): return
 	if sender.global_position.distance_to(recipient.global_position)>SecurityDirector.RADIO_RANGE: return
-	recipient.receive_radio_report(report,security_director.get_simulation_time())
+	if recipient.receive_radio_report(report,security_director.get_simulation_time()):
+		security_director.consider_search(report.id, recipient_id, attempts, _plan_security_search)
+
+
+func _plan_security_search(report: Dictionary, recipient_id: String, rng: RandomNumberGenerator,
+		seconds_left: float) -> Dictionary:
+	var investigator_id := recipient_id
+	var holder_id := str(report.sender_id)
+	var investigator := _security_search_candidate(investigator_id, "investigator", report.position,
+		Vector3.INF, seconds_left, rng)
+	if not investigator.has("destination"):
+		investigator_id = holder_id
+		holder_id = recipient_id
+		investigator = _security_search_candidate(investigator_id, "investigator", report.position,
+			Vector3.INF, seconds_left, rng)
+	if not investigator.has("destination"): return {}
+	var assignments := {investigator_id: investigator}
+	var holder := _security_search_candidate(holder_id, "holder", report.position,
+		investigator.destination, seconds_left, rng)
+	if holder.has("destination"): assignments[holder_id] = holder
+	return assignments
+
+func _security_search_candidate(guard_id: String, role: String, evidence: Vector3, reserved: Vector3,
+		seconds_left: float, rng: RandomNumberGenerator) -> Dictionary:
+	var enemy := _security_enemy_by_id(guard_id)
+	if not enemy or not enemy.available_for_security_search(): return {}
+	var partner := _security_enemy_by_id(SECURITY_RADIO_PARTNERS[guard_id])
+	var other: Vector3 = partner.global_position if partner and partner.hp > 0 else Vector3.INF
+	var speed := 1.65 if enemy.role == "rifle" else 2.5
+	var travel_budget := maxf(0.0, seconds_left - (1.2 if role == "investigator" else .5)) * speed
+	var position: Dictionary = room.security_search_position(role, enemy.global_position, other,
+		evidence, reserved, travel_budget, rng)
+	position["role"] = role
+	return position
+
+func _on_security_search_assignment(guard_id: String, assignment: Dictionary, reason: String) -> void:
+	if not security_director or assignment.attempt_id != attempts: return
+	var enemy := _security_enemy_by_id(guard_id)
+	if not enemy: return
+	if reason.is_empty():
+		enemy.receive_search_assignment(assignment)
+	else:
+		enemy.clear_search_assignment(assignment.incident_id, assignment.attempt_id, reason)
+
+func mark_security_search_arrival(enemy: Node, assignment: Dictionary) -> void:
+	if not security_director or not active or get_tree().paused: return
+	if _security_enemy_by_id(enemy.id) != enemy: return
+	security_director.mark_search_arrival(enemy.id, assignment.incident_id, assignment.attempt_id, enemy.global_position)
 
 func export_csv(path: String="") -> String:
 	var destination: String = "user://bunker-07-session.csv" if path=="" else path

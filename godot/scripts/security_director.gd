@@ -1,9 +1,12 @@
 extends RefCounted
 ## Mission-scoped evidence and radio snapshots. No actor/player references.
+signal search_assignment_changed(guard_id: String, assignment: Dictionary, reason: String)
 signal telemetry_event(event: String, detail: Dictionary)
 signal radio_report_changed(report: Dictionary)
 signal radio_report_delivered(recipient_id: String, report: Dictionary)
 
+const SECURITY_PARTNERS := {"security-smg": "security-rifle", "security-rifle": "security-smg"}
+const SEARCH_ARRIVAL := .65
 const MAX_OBSERVATIONS := 128
 const KINDS := ["visual_contact", "sound_contact", "visual_lost"]
 const RADIO_RANGE := 12.0
@@ -11,6 +14,9 @@ const MAX_PENDING_REPORTS := 16
 const MAX_RADIO_HISTORY := 64
 const MAX_KNOWLEDGE_PER_GUARD := 32
 const MAX_RADIO_RECIPIENTS := 2
+var _search := {}
+var _search_episodes := {}
+var _last_search_report := 0
 var _mission_id := ""
 var _attempt_id := 0
 var _generation := 0
@@ -55,6 +61,7 @@ func advance(delta: float) -> void:
 		else:
 			index += 1
 	_expire_radio_knowledge()
+	_advance_search()
 	_advance_radio_reports()
 
 ## Invalid input returns 0 without consuming an ID, storing data or emitting telemetry.
@@ -95,6 +102,9 @@ func get_observations_for(observer_id: String) -> Array[Dictionary]:
 	return result
 
 func clear() -> void:
+	_finish_search("mission_end")
+	_search_episodes.clear()
+	_last_search_report = 0
 	var had_mission := not _mission_id.is_empty()
 	var detail := {"count":_observations.size()}
 	_observations.clear()
@@ -187,6 +197,7 @@ func queue_radio_report(sender_id: String, observation_id: int, recipient_ids: A
 		"recipient_ids":recipients,"position":observation.position,
 		"observed_at":observation.created_at,"confidence":observation.confidence,
 		"expires_at":observation.expires_at,"submitted_at":_time,"completes_at":completion,
+		"sight_episode":observation.metadata.get("sight_episode", 0),
 		"status":"pending","cancellation_reason":"","attempt_id":_attempt_id,"mission_id":_mission_id}
 	_next_report_id += 1
 	_pending_reports.append(report)
@@ -301,3 +312,104 @@ func _radio_event(event: String, report: Dictionary) -> void:
 	var at: Vector3 = detail.position
 	detail.position = [at.x,at.y,at.z]
 	_emit(event,detail)
+
+## Returns a detached snapshot of the only active incident and its reservations.
+func get_search_incident() -> Dictionary:
+	return _search.duplicate(true)
+
+## Use the retained delivered record, never the caller's copy of the evidence.
+func consider_search(report_id: int, recipient_id: String, attempt_id: int, plan: Callable) -> void:
+	if attempt_id != _attempt_id or attempt_id <= 0 or report_id <= _last_search_report: return
+	if not plan.is_valid() or not SECURITY_PARTNERS.has(recipient_id): return
+	var report: Dictionary = {}
+	for delivered: Dictionary in _radio_knowledge.get(recipient_id, []):
+		if delivered.id == report_id:
+			report = delivered
+			break
+	if report.is_empty() or report.expires_at <= _time: return
+	if SECURITY_PARTNERS[recipient_id] != report.sender_id: return
+	_last_search_report = report_id
+	var episode: Variant = report.sight_episode
+	if episode is int and episode > 0:
+		if episode <= int(_search_episodes.get(report.sender_id, 0)): return
+		_search_episodes[report.sender_id] = episode
+	if not _search.is_empty():
+		var old: Dictionary = _search.evidence
+		if report.observed_at <= old.observed_at or report.position.distance_to(old.position) < 3.0: return
+	# The callback is synchronous and is never retained. Its input is evidence and IDs.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = attempt_id * 1000003 + int(report.observation_id) * 97 + report_id
+	var deadline: float = minf(report.expires_at, _time + 6.5)
+	var assignments: Dictionary = plan.call(report.duplicate(true), recipient_id, rng, deadline - _time)
+	if assignments.is_empty(): return
+	_finish_search("superseded")
+	_search = {"id": report_id, "attempt_id": attempt_id, "evidence": report,
+		"state": "active", "deadline": deadline, "assignments": assignments.duplicate(true)}
+	_emit_search("started", {}, "paired" if assignments.size() == 2 else "solo")
+	for guard_id: String in _search.assignments:
+		var assignment: Dictionary = _search.assignments[guard_id]
+		assignment.merge({"incident_id": report_id, "attempt_id": attempt_id, "guard_id": guard_id,
+			"evidence_position": report.position, "observed_at": report.observed_at,
+			"assigned_at": _time, "deadline": deadline, "state": "moving", "arrived_at": -1.0})
+		_emit_search("assigned", assignment)
+		search_assignment_changed.emit(guard_id, assignment.duplicate(true), "")
+
+func mark_search_arrival(guard_id: String, incident_id: int, attempt_id: int, at: Vector3) -> void:
+	if _search.is_empty() or _search.id != incident_id or attempt_id != _attempt_id: return
+	var assignment: Dictionary = _search.assignments.get(guard_id, {})
+	if assignment.is_empty() or assignment.state != "moving" or not at.is_finite(): return
+	if at.distance_to(assignment.destination) > SEARCH_ARRIVAL: return
+	assignment.state = "arrived"
+	assignment.arrived_at = _time
+	_emit_search("arrived", assignment)
+
+func interrupt_search(guard_id: String, reason: String) -> void:
+	if _search.is_empty() or not _search.assignments.has(guard_id): return
+	var assignment: Dictionary = _search.assignments[guard_id]
+	if assignment.role == "investigator":
+		_finish_search(reason)
+	else:
+		_release_search_guard(guard_id, reason)
+
+func _advance_search() -> void:
+	if _search.is_empty(): return
+	if _search.deadline <= _time:
+		_finish_search("evidence_expired" if _search.evidence.expires_at <= _time else "search_timeout")
+		return
+	for guard_id: String in _search.assignments.keys():
+		if not _radio_alive(guard_id):
+			interrupt_search(guard_id, "guard_unavailable")
+			if _search.is_empty(): return
+	for assignment: Dictionary in _search.assignments.values():
+		if assignment.role == "investigator" and assignment.state == "arrived" and _time >= assignment.arrived_at + 1.2:
+			_finish_search("area_checked")
+			return
+
+func _finish_search(reason: String) -> void:
+	if _search.is_empty(): return
+	var completed := reason in ["area_checked", "search_timeout", "evidence_expired"]
+	_search.state = "completed" if completed else "cancelled"
+	_emit_search(_search.state, {}, reason)
+	for guard_id: String in _search.assignments.keys():
+		_release_search_guard(guard_id, reason)
+	_search.clear()
+
+func _release_search_guard(guard_id: String, reason: String) -> void:
+	var assignment: Dictionary = _search.assignments[guard_id]
+	_search.assignments.erase(guard_id)
+	assignment.state = "released"
+	_emit_search("released", assignment, reason)
+	search_assignment_changed.emit(guard_id, assignment.duplicate(true), reason)
+
+func _emit_search(event: String, assignment: Dictionary, reason: String = "") -> void:
+	var evidence: Dictionary = _search.evidence
+	var position: Vector3 = evidence.position
+	var detail := {"incident_id": _search.id, "source_report_id": evidence.id,
+		"source_observation_id": evidence.observation_id, "observer_id": evidence.observer_id,
+		"position": [position.x, position.y, position.z], "observed_at": evidence.observed_at,
+		"expires_at": evidence.expires_at, "deadline": _search.deadline, "state": _search.state, "reason": reason}
+	if not assignment.is_empty():
+		var destination: Vector3 = assignment.destination
+		detail.merge({"guard_id": assignment.guard_id, "role": assignment.role,
+			"destination": [destination.x, destination.y, destination.z], "state": assignment.state}, true)
+	_emit("security_search_" + event, detail)
