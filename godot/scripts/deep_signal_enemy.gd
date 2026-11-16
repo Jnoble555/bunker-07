@@ -32,6 +32,9 @@ var _path_timer := 0.0
 var _path_target := Vector3.INF
 var _stuck := 0.0
 var _previous := Vector3.ZERO
+var _search_assignment := {}
+var _search_clear_remaining := 0.0
+var _sight_episode := 0
 var _observation_seen := false
 var _observation_refresh := 0.0
 var _observed_position := Vector3.ZERO
@@ -67,6 +70,10 @@ func setup(owner_controller:Node,spawn:Vector3,spec:Dictionary={}) -> void:
 	_visual.configure(role)
 	reset_guard()
 func reset_guard() -> void:
+	_search_assignment.clear()
+	_search_clear_remaining = 0
+	_sight_episode = 0
+	_visual.set_search_status("")
 	_observation_seen=false
 	_observation_refresh=0
 	_observed_position=Vector3.ZERO
@@ -113,17 +120,21 @@ func can_see_player() -> bool:
 	return visible_point(_player_eye())
 func hear_shot(at:Vector3,shared:bool=false,record_sound:bool=true) -> void:
 	# Retain the call signature for compatibility, but reject the retired sharing shortcut.
-	if shared: return
-	if hp<=0 or global_position.distance_to(at)>(12.0 if shared else 19.0): return
-	if not shared and record_sound: _report_observation("sound_contact",at,.6,7.0)
-	# Sound supplies a location, never continuous access to the hidden player.
-	if state!="engage":
-		last_known=at
-		memory_remaining=7.0
-		_knowledge_time=_simulation_time()
-		_knowledge_confidence=.6
-		_knowledge_expires=_knowledge_time+7.0
-		_transition("suspicious")
+	if shared or not at.is_finite() or hp<=0 or not controller.active or get_tree().paused: return
+	if global_position.distance_to(at)>19.0: return
+	if record_sound: _report_observation("sound_contact",at,.6,7.0)
+	# Keep current sight and newer local evidence ahead of the shot.
+	var now := _simulation_time()
+	if state=="engage" or (_knowledge_expires>now and _knowledge_time>=now): return
+	if not _search_assignment.is_empty():
+		if now<=_search_assignment.observed_at or can_see_player(): return
+		controller.interrupt_security_search(self, "new_local_sound")
+	last_known=at
+	memory_remaining=7.0
+	_knowledge_time=now
+	_knowledge_confidence=.6
+	_knowledge_expires=now+7.0
+	if state!="reload": _transition("suspicious")
 func receive_hit(amount:int=1) -> void:
 	if hp<=0 or not controller.active or get_tree().paused: return
 	hp=maxi(0,hp-amount)
@@ -160,7 +171,12 @@ func _physics_process(delta:float) -> void:
 	_reposition=maxf(0,_reposition-delta)
 	var seen:=can_see_player()
 	_observe_visibility(seen,delta)
+	if _search_clear_remaining > 0:
+		_search_clear_remaining = 0 if seen else maxf(0, _search_clear_remaining - delta)
+		if _search_clear_remaining == 0: _visual.set_search_status("")
 	if seen:
+		if not _search_assignment.is_empty():
+			controller.interrupt_security_search(self, "visual_contact")
 		last_known=_player_eye()
 		memory_remaining=8
 		_knowledge_time=_simulation_time()
@@ -213,8 +229,12 @@ func receive_radio_report(report:Dictionary,now:float) -> bool:
 	_knowledge_expires=expires
 	if state!="reload": _transition("suspicious")
 	return true
+func get_sight_episode() -> int:
+	return _sight_episode
+
 func _observe_visibility(seen:bool,delta:float) -> void:
 	if seen:
+		if not _observation_seen: _sight_episode += 1
 		_observation_refresh=maxf(0,_observation_refresh-delta)
 		_observed_position=_player_eye()
 		if not _observation_seen or _observation_refresh==0:
@@ -251,6 +271,9 @@ func _decide(delta:float,seen:bool) -> void:
 				if _burst_left==0: _burst_left=2 if role=="rifle" else 3
 				_fire()
 		return
+	if not _search_assignment.is_empty():
+		_execute_security_search(delta)
+		return
 	if last_known!=Vector3.INF and memory_remaining>0:
 		_transition("search" if state!="suspicious" else "suspicious")
 		_move_toward(last_known,delta)
@@ -264,6 +287,64 @@ func _decide(delta:float,seen:bool) -> void:
 	if not patrol_points.is_empty():
 		if global_position.distance_to(patrol_points[_patrol_index])<.65: _patrol_index=(_patrol_index+1)%patrol_points.size()
 		_move_toward(patrol_points[_patrol_index],delta)
+
+func available_for_security_search() -> bool:
+	return hp > 0 and not is_queued_for_deletion() and not _observation_seen and stagger == 0
+
+func receive_search_assignment(assignment: Dictionary) -> bool:
+	if not available_for_security_search() or not controller.active or get_tree().paused: return false
+	if assignment.attempt_id != controller.security_radio_attempt_id() or assignment.guard_id != id: return false
+	var now := _simulation_time()
+	if assignment.deadline <= now or not assignment.destination.is_finite(): return false
+	if _knowledge_confidence == .6 and _knowledge_expires > now and _knowledge_time > assignment.observed_at: return false
+	_search_assignment = assignment.duplicate(true)
+	_search_assignment.scan_heading = -global_basis.z
+	_path.assign(_search_assignment.path)
+	_path_target = _search_assignment.destination
+	_path_timer = INF
+	_stuck = 0
+	_search_clear_remaining = 0
+	_visual.set_search_status(_search_assignment.role)
+	return true
+
+func clear_search_assignment(incident_id: int, attempt_id: int, reason: String) -> void:
+	if _search_assignment.is_empty() or _search_assignment.incident_id != incident_id or _search_assignment.attempt_id != attempt_id: return
+	var completed := reason in ["area_checked", "search_timeout", "evidence_expired"]
+	if completed and _knowledge_time <= _search_assignment.assigned_at and _knowledge_confidence == 1.0:
+		if last_known.distance_to(_search_assignment.evidence_position) < 3.0:
+			last_known = Vector3.INF
+			memory_remaining = 0
+			_knowledge_expires = 0
+	_search_assignment.clear()
+	_path.clear()
+	_path_timer = 0
+	_path_target = Vector3.INF
+	_stuck = 0
+	_search_clear_remaining = .8 if completed else 0.0
+	_visual.set_search_status("clear" if completed else "")
+
+func _execute_security_search(delta: float) -> void:
+	var assignment := _search_assignment
+	var destination: Vector3 = assignment.destination
+	var investigator: bool = assignment.role == "investigator"
+	_transition("investigate" if investigator else "hold")
+	if not is_same(_search_assignment, assignment) or assignment.is_empty(): return
+	if global_position.distance_to(destination) <= .65:
+		if assignment.state == "moving":
+			assignment.state = "arrived"
+			controller.mark_security_search_arrival(self, assignment)
+			if not is_same(_search_assignment, assignment) or assignment.is_empty(): return
+		var evidence: Vector3 = assignment.evidence_position
+		if investigator:
+			var heading := Vector3(evidence.x - destination.x, 0, evidence.z - destination.z)
+			if heading.length_squared() < .1: heading = assignment.scan_heading
+			var scan := sin((_simulation_time() - assignment.assigned_at) * 3.8)
+			_face(global_position + heading.rotated(Vector3.UP, scan * .65))
+		else:
+			_face(evidence)
+		return
+	_move_toward(destination, delta)
+
 func _fire() -> void:
 	# Both eye and physical muzzle must clear world geometry; allies also block fire.
 	if not can_see_player(): return
@@ -288,7 +369,13 @@ func _face(at:Vector3) -> void:
 	if global_position.distance_to(flat)>.05: look_at(flat,Vector3.UP)
 func _move_toward(target:Vector3,delta:float) -> void:
 	if _path_timer==0 or _path_target.distance_to(target)>1:
-		_path=controller.room.tactical_path(global_position,target)
+		if not _search_assignment.is_empty() and state in ["investigate", "hold"]:
+			_path = controller.room.security_search_path(global_position, target)
+			if _path.is_empty():
+				controller.interrupt_security_search(self, "route_blocked")
+				return
+		else:
+			_path=controller.room.tactical_path(global_position,target)
 		_path_target=target
 		_path_timer=.6
 	while not _path.is_empty() and global_position.distance_to(_path[0])<.55: _path.pop_front()

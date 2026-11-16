@@ -1,4 +1,6 @@
-# GHOST PROTOCOL: implemented architecture
+# GHOST PROTOCOL architecture
+
+[Phase 3 coordinated search](ghost-protocol-search.md) consumes accepted SECURITY radio deliveries. The Phase 3 document describes roles, reservations, paths, replay and validation.
 
 Phase 2 adds delayed, interruptible radio for the authored SECURITY pair to the preserved Phase 1 evidence store. Full data contracts, before/after behavior, encounter fixtures, validation results and open browser gate are in [radio implementation](ghost-protocol-radio.md). The [Phase 0 baseline](ghost-protocol-baseline.md) remains the historical behavior reference.
 
@@ -11,7 +13,9 @@ flowchart LR
   Mission -->|actor value snapshots and simulation delta| Director
   Director -->|completed report snapshot| Mission
   Mission -->|current attempt and living recipient| Receiver[Enemy receive_radio_report]
-  Receiver -->|existing investigation and combat| Navigation[Existing movement and navigation]
+  Receiver -->|accepted historical sighting| Director
+  Director -->|attempt-scoped roles| Mission
+  Mission -->|validated assignments| Navigation[Existing movement and navigation]
   Director -->|structured events| CSV[Existing controller telemetry and CSV]
   Mission --> Audio[Spatial radio cues and local guard indicator]
 ```
@@ -19,7 +23,7 @@ flowchart LR
 - **Director:** mission-owned `RefCounted`, observations, bounded report queue, original provenance/deadlines, delivery/expiry/dedup and deterministic ordering. It cannot query the player or retain actor references.
 - **Mission:** Deep Signal-only ownership, stable actor ID lookup, pair/range authorization, alive/stagger/membership snapshots, attempt identity, once-per-tick advancement, signal routing, cues and cleanup. Iron Relay's shared mission ID is not used as the activation gate.
 - **Enemy:** local perception and last-known evidence, reaction, firing/reload, movement/cover/navigation and stuck recovery. It reports actual sighting IDs and receives historical messages intentionally, without routing radio through shot hearing.
-- **Level:** unchanged authored solids, cover points and `tactical_path`. No new director path queries or destinations exist.
+- **Level:** unchanged authored solids, cover points and `tactical_path`. Phase 3 planning checks bounded candidates through the existing path graph and reserves legal destinations for the SECURITY pair.
 - **Player:** unchanged movement/weapons and existing one-event-per-shot hearing broadcast. Damage itself no longer reveals camera position.
 
 ## Preserved observation surface
@@ -64,7 +68,7 @@ Production registers only `security-smg` and `security-rifle`; each may reach it
 
 The controller advances once after processing current player actions, under active/unpaused guards. This lets a queued hit interrupt before same-tick completion. Current actor membership/life/stagger/positions are synchronized before delivery; the controller revalidates actual nodes again in the completion callback. Dead, removed, queued-for-deletion, self, duplicate and out-of-range recipients cannot learn anything. A hit's actual stagger or death cancels immediately; animation/reload alone does not. Losing sight preserves the valid in-flight snapshot.
 
-All time is explicit simulation seconds. Expired evidence cancels in-flight reports; expiry equals the original source deadline, never delivery time plus TTL. Reports resolve in report-ID insertion order and recipients in lexical order. Replay guarantees equal ordered events/deltas on the same engine; cross-platform physics determinism is not claimed. No independent timer, wall clock or RNG was introduced.
+All time is explicit simulation seconds. Expired evidence cancels in-flight reports; expiry equals the original source deadline, never delivery time plus TTL. Reports resolve in report-ID insertion order and recipients in lexical order. Replay guarantees equal ordered events/deltas on the same engine; cross-platform physics determinism is not claimed. Phase 3 uses the same simulation clock and an isolated RNG for selection among ranked navigation candidates.
 
 Existing cleanup covers retry, mission load/briefing, title/abandon, win/loss, scene change, quit and destruction. Radio signals disconnect before clearing, local indicators turn off, pending reports cancel for telemetry, and all evidence/history/actor snapshots/dedup/attempt IDs reset. Old instances are inactive; stale delivered snapshots fail the actor's current-attempt check. Pause, journal and settings freeze the director without discarding the attempt.
 
@@ -74,6 +78,12 @@ Existing `register_event`/CSV columns carry versioned JSON detail; observation a
 
 Three short, cached synthesized spatial chirps and a depth-tested cyan chest light/RADIO label make the transmission local and interruptible. Mute affects playback only. No voice assets, libraries, global guard-location message or permanent HUD were added. Audio/visual test status and the explicitly unverified audible mix are recorded in the radio report.
 
-## Phase 3 boundary
+## Phase 3 ownership
 
-No tactical roles, search reservations, generated destinations, flanking, reinforcement waves, forwarded reports or sector alert framework exist. Future shared-knowledge consumers must retain observation provenance/deadlines, ask the existing level for reachable paths, and leave enemy combat/navigation local. Only expand partnerships or coordination after the open browser/audio/human playtest gate and performance review. Any future randomized decisions need an isolated seeded RNG and stable candidate ordering; current radio needs none.
+A delivered visual report accepted by its recipient can start one attempt-scoped SECURITY incident. The director tracks original provenance, deadlines, roles, arrivals and reservations. The controller requests checked paths from the room. Each guard owns its physically executed movement, real visibility checks and combat priority. Current actor membership, a successful delivery and the original evidence deadline constrain every incident. See the [search implementation](ghost-protocol-search.md) for the recorded encounter and limits.
+
+### Phase 3.1 assignment acceptance and local evidence
+
+The controller returns each actor's acceptance to the director synchronously. Pending offers cannot reserve destinations. The director keeps only accepted assignments and detaches an incident before publishing its completion or cancellation, so callbacks cannot revive its reservations. Investigator loss cancels the incident and holder loss permits solo investigation. Role cleanup is matched by mission attempt and incident ID.
+
+Normal perception retains first priority. A newer audible local shot can invalidate older coordinated movement and start a local investigation of the shot origin. Sound confidence remains local and cannot initiate a visual radio report. Reload timing stays independent of evidence priority, and deadlines continue during reload.

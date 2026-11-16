@@ -5,6 +5,8 @@ var status: StandardMaterial3D
 var gun: Node3D
 var radio_indicator: MeshInstance3D
 var radio_label: Label3D
+var search_label: Label3D
+var _search_status := ""
 func _ready() -> void:
 	status = material(Color("407d85"))
 	box(Vector3(.55,.75,.35),Vector3(0,1,0),material(Color("303c43")))
@@ -31,17 +33,26 @@ func _ready() -> void:
 	radio_label.billboard=BaseMaterial3D.BILLBOARD_ENABLED
 	radio_label.no_depth_test=false
 	add_child(radio_label)
+	search_label = radio_label.duplicate()
+	search_label.font_size = 23
+	add_child(search_label)
 	set_radio_transmitting(false)
 func set_radio_transmitting(transmitting:bool) -> void:
 	if is_instance_valid(radio_indicator): radio_indicator.visible=transmitting
 	if is_instance_valid(radio_label): radio_label.visible=transmitting
+	if is_instance_valid(search_label): search_label.visible = not transmitting and not _search_status.is_empty()
+func set_search_status(value: String) -> void:
+	_search_status = value
+	search_label.text = {"investigator": "SEARCH", "holder": "HOLD", "clear": "CLEAR"}.get(value, "")
+	search_label.modulate = Color("d7d3ad") if value == "holder" else Color("ffc064") if value == "investigator" else Color("a0bab7")
+	search_label.visible = not radio_label.visible and not value.is_empty()
 func configure(role:String) -> void:
 	if role=="rifle": gun.scale.z=1.35
 func pose(state:String, firing:bool, windup:float, alive:bool) -> void:
 	visible=alive
 	flash.visible=firing
 	status.albedo_color=Color("ff634b") if windup>0 else Color("ffc064") if state in ["suspicious","search","reload"] else Color("407d85")
-	gun.rotation.x=-.5 if state=="reload" else -.08 if firing else 0.0
+	gun.rotation.x=-.5 if state=="reload" else -.08 if firing else -.14 if state == "hold" else 0.0
 func material(color:Color,emission:bool=false)->StandardMaterial3D:
 	var m:=StandardMaterial3D.new()
 	m.albedo_color=color

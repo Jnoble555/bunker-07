@@ -44,7 +44,7 @@ jobs:
         run: godot --headless --path godot --editor --import --quit
       - name: Verify packaging tools
         run: python3 -m unittest discover -s tests -p test_web_build.py -v
-      - name: Run all 18 Godot regression programs
+      - name: Run Godot regression programs
         run: python3 scripts/run_godot_tests.py --godot godot --logs "$RUNNER_TEMP/godot-test-logs"
       - name: Export and validate exact checked-out commit
         run: python3 scripts/build_web.py --godot godot --output "$PWD/_site" --commit "$GITHUB_SHA"
