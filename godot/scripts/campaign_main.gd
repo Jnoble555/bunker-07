@@ -581,7 +581,7 @@ func _on_security_radio_delivered(recipient_id: String, report: Dictionary) -> v
 	if sender.is_queued_for_deletion() or recipient.is_queued_for_deletion(): return
 	if sender.global_position.distance_to(recipient.global_position)>SecurityDirector.RADIO_RANGE: return
 	if recipient.receive_radio_report(report,security_director.get_simulation_time()):
-		security_director.consider_search(report.id, recipient_id, attempts, _plan_security_search)
+		security_director.consider_search(report.id, recipient_id, attempts, _plan_security_search, _accept_security_search_assignment)
 
 
 func _plan_security_search(report: Dictionary, recipient_id: String, rng: RandomNumberGenerator,
@@ -615,14 +615,15 @@ func _security_search_candidate(guard_id: String, role: String, evidence: Vector
 	position["role"] = role
 	return position
 
+func _accept_security_search_assignment(guard_id: String, assignment: Dictionary) -> bool:
+	if not security_director or assignment.attempt_id != attempts: return false
+	var enemy := _security_enemy_by_id(guard_id)
+	return enemy != null and enemy.receive_search_assignment(assignment)
+
 func _on_security_search_assignment(guard_id: String, assignment: Dictionary, reason: String) -> void:
 	if not security_director or assignment.attempt_id != attempts: return
 	var enemy := _security_enemy_by_id(guard_id)
-	if not enemy: return
-	if reason.is_empty():
-		enemy.receive_search_assignment(assignment)
-	else:
-		enemy.clear_search_assignment(assignment.incident_id, assignment.attempt_id, reason)
+	if enemy: enemy.clear_search_assignment(assignment.incident_id, assignment.attempt_id, reason)
 
 func mark_security_search_arrival(enemy: Node, assignment: Dictionary) -> void:
 	if not security_director or not active or get_tree().paused: return

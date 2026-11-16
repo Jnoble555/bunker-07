@@ -120,17 +120,21 @@ func can_see_player() -> bool:
 	return visible_point(_player_eye())
 func hear_shot(at:Vector3,shared:bool=false,record_sound:bool=true) -> void:
 	# Retain the call signature for compatibility, but reject the retired sharing shortcut.
-	if shared: return
-	if hp<=0 or global_position.distance_to(at)>(12.0 if shared else 19.0): return
-	if not shared and record_sound: _report_observation("sound_contact",at,.6,7.0)
-	# Sound supplies a location, never continuous access to the hidden player.
-	if state!="engage":
-		last_known=at
-		memory_remaining=7.0
-		_knowledge_time=_simulation_time()
-		_knowledge_confidence=.6
-		_knowledge_expires=_knowledge_time+7.0
-		_transition("suspicious")
+	if shared or not at.is_finite() or hp<=0 or not controller.active or get_tree().paused: return
+	if global_position.distance_to(at)>19.0: return
+	if record_sound: _report_observation("sound_contact",at,.6,7.0)
+	# Keep current sight and newer local evidence ahead of the shot.
+	var now := _simulation_time()
+	if state=="engage" or (_knowledge_expires>now and _knowledge_time>=now): return
+	if not _search_assignment.is_empty():
+		if now<=_search_assignment.observed_at or can_see_player(): return
+		controller.interrupt_security_search(self, "new_local_sound")
+	last_known=at
+	memory_remaining=7.0
+	_knowledge_time=now
+	_knowledge_confidence=.6
+	_knowledge_expires=now+7.0
+	if state!="reload": _transition("suspicious")
 func receive_hit(amount:int=1) -> void:
 	if hp<=0 or not controller.active or get_tree().paused: return
 	hp=maxi(0,hp-amount)
@@ -290,7 +294,9 @@ func available_for_security_search() -> bool:
 func receive_search_assignment(assignment: Dictionary) -> bool:
 	if not available_for_security_search() or not controller.active or get_tree().paused: return false
 	if assignment.attempt_id != controller.security_radio_attempt_id() or assignment.guard_id != id: return false
-	if assignment.deadline <= _simulation_time() or not assignment.destination.is_finite(): return false
+	var now := _simulation_time()
+	if assignment.deadline <= now or not assignment.destination.is_finite(): return false
+	if _knowledge_confidence == .6 and _knowledge_expires > now and _knowledge_time > assignment.observed_at: return false
 	_search_assignment = assignment.duplicate(true)
 	_search_assignment.scan_heading = -global_basis.z
 	_path.assign(_search_assignment.path)
@@ -318,18 +324,21 @@ func clear_search_assignment(incident_id: int, attempt_id: int, reason: String) 
 	_visual.set_search_status("clear" if completed else "")
 
 func _execute_security_search(delta: float) -> void:
-	var destination: Vector3 = _search_assignment.destination
-	var investigator: bool = _search_assignment.role == "investigator"
+	var assignment := _search_assignment
+	var destination: Vector3 = assignment.destination
+	var investigator: bool = assignment.role == "investigator"
 	_transition("investigate" if investigator else "hold")
+	if not is_same(_search_assignment, assignment) or assignment.is_empty(): return
 	if global_position.distance_to(destination) <= .65:
-		if _search_assignment.state == "moving":
-			_search_assignment.state = "arrived"
-			controller.mark_security_search_arrival(self, _search_assignment)
-		var evidence: Vector3 = _search_assignment.evidence_position
+		if assignment.state == "moving":
+			assignment.state = "arrived"
+			controller.mark_security_search_arrival(self, assignment)
+			if not is_same(_search_assignment, assignment) or assignment.is_empty(): return
+		var evidence: Vector3 = assignment.evidence_position
 		if investigator:
 			var heading := Vector3(evidence.x - destination.x, 0, evidence.z - destination.z)
-			if heading.length_squared() < .1: heading = _search_assignment.scan_heading
-			var scan := sin((_simulation_time() - _search_assignment.assigned_at) * 3.8)
+			if heading.length_squared() < .1: heading = assignment.scan_heading
+			var scan := sin((_simulation_time() - assignment.assigned_at) * 3.8)
 			_face(global_position + heading.rotated(Vector3.UP, scan * .65))
 		else:
 			_face(evidence)

@@ -19,6 +19,7 @@ var _search_episodes := {}
 var _last_search_report := 0
 var _mission_id := ""
 var _attempt_id := 0
+var _clearing := false
 var _generation := 0
 var _time := 0.0
 var _next_id := 1
@@ -31,6 +32,7 @@ var _radio_actors: Dictionary = {}
 var _delivered_keys: Dictionary = {}
 
 func initialize_for_mission(mission_id: String, attempt_id: int = 0) -> void:
+	if _clearing: return
 	clear()
 	if mission_id.strip_edges().is_empty() or mission_id.length() > 96: return
 	_mission_id = mission_id
@@ -102,6 +104,8 @@ func get_observations_for(observer_id: String) -> Array[Dictionary]:
 	return result
 
 func clear() -> void:
+	if _clearing: return
+	_clearing = true
 	_finish_search("mission_end")
 	_search_episodes.clear()
 	_last_search_report = 0
@@ -120,6 +124,7 @@ func clear() -> void:
 	_mission_id = ""
 	_time = 0.0
 	_next_id = 1
+	_clearing = false
 
 func _valid_metadata(metadata: Dictionary) -> bool:
 	# Flat JSON scalars only: bounded, copyable and incapable of retaining Nodes.
@@ -315,12 +320,15 @@ func _radio_event(event: String, report: Dictionary) -> void:
 
 ## Returns a detached snapshot of the only active incident and its reservations.
 func get_search_incident() -> Dictionary:
-	return _search.duplicate(true)
+	var snapshot := _search.duplicate(true)
+	snapshot.erase("pending")
+	return snapshot
 
 ## Use the retained delivered record, never the caller's copy of the evidence.
-func consider_search(report_id: int, recipient_id: String, attempt_id: int, plan: Callable) -> void:
-	if attempt_id != _attempt_id or attempt_id <= 0 or report_id <= _last_search_report: return
-	if not plan.is_valid() or not SECURITY_PARTNERS.has(recipient_id): return
+func consider_search(report_id: int, recipient_id: String, attempt_id: int, plan: Callable, accept: Callable) -> void:
+	if _clearing or attempt_id != _attempt_id or attempt_id <= 0 or report_id <= _last_search_report: return
+	if not plan.is_valid() or not accept.is_valid() or not SECURITY_PARTNERS.has(recipient_id): return
+	var generation := _generation
 	var report: Dictionary = {}
 	for delivered: Dictionary in _radio_knowledge.get(recipient_id, []):
 		if delivered.id == report_id:
@@ -341,18 +349,37 @@ func consider_search(report_id: int, recipient_id: String, attempt_id: int, plan
 	rng.seed = attempt_id * 1000003 + int(report.observation_id) * 97 + report_id
 	var deadline: float = minf(report.expires_at, _time + 6.5)
 	var assignments: Dictionary = plan.call(report.duplicate(true), recipient_id, rng, deadline - _time)
-	if assignments.is_empty(): return
+	if assignments.is_empty() or generation != _generation or report_id != _last_search_report or deadline <= _time: return
 	_finish_search("superseded")
-	_search = {"id": report_id, "attempt_id": attempt_id, "evidence": report,
-		"state": "active", "deadline": deadline, "assignments": assignments.duplicate(true)}
-	_emit_search("started", {}, "paired" if assignments.size() == 2 else "solo")
-	for guard_id: String in _search.assignments:
-		var assignment: Dictionary = _search.assignments[guard_id]
+	if generation != _generation or attempt_id != _attempt_id or report_id != _last_search_report or deadline <= _time: return
+	var incident := {"id": report_id, "attempt_id": attempt_id, "evidence": report,
+		"state": "active", "deadline": deadline, "assignments": {}, "pending": {}}
+	_search = incident
+	for guard_id: String in assignments:
+		var assignment: Dictionary = assignments[guard_id].duplicate(true)
 		assignment.merge({"incident_id": report_id, "attempt_id": attempt_id, "guard_id": guard_id,
 			"evidence_position": report.position, "observed_at": report.observed_at,
 			"assigned_at": _time, "deadline": deadline, "state": "moving", "arrived_at": -1.0})
-		_emit_search("assigned", assignment)
-		search_assignment_changed.emit(guard_id, assignment.duplicate(true), "")
+		# Pending offers are invisible to reservation queries until the actor accepts.
+		incident.pending = assignment
+		var accepted: bool = accept.call(guard_id, assignment.duplicate(true))
+		var still_pending: bool = is_same(_search, incident) and is_same(incident.pending, assignment)
+		if not still_pending:
+			if accepted: search_assignment_changed.emit(guard_id, assignment.duplicate(true), "assignment_cancelled")
+			if not is_same(_search, incident): return
+			continue
+		incident.pending = {}
+		if not accepted:
+			_emit_search(incident, "rejected", assignment, "assignment_rejected")
+			if not is_same(_search, incident): return
+			if assignment.role == "investigator":
+				_finish_search("assignment_rejected")
+				return
+			continue
+		incident.assignments[guard_id] = assignment
+		_emit_search(incident, "assigned", assignment)
+		if not is_same(_search, incident): return
+	_emit_search(incident, "started", {}, "paired" if incident.assignments.size() == 2 else "solo")
 
 func mark_search_arrival(guard_id: String, incident_id: int, attempt_id: int, at: Vector3) -> void:
 	if _search.is_empty() or _search.id != incident_id or attempt_id != _attempt_id: return
@@ -361,26 +388,34 @@ func mark_search_arrival(guard_id: String, incident_id: int, attempt_id: int, at
 	if at.distance_to(assignment.destination) > SEARCH_ARRIVAL: return
 	assignment.state = "arrived"
 	assignment.arrived_at = _time
-	_emit_search("arrived", assignment)
+	_emit_search(_search, "arrived", assignment)
 
 func interrupt_search(guard_id: String, reason: String) -> void:
-	if _search.is_empty() or not _search.assignments.has(guard_id): return
+	if _search.is_empty(): return
+	if _search.pending.get("guard_id") == guard_id:
+		if _search.pending.role == "investigator":
+			_finish_search(reason)
+		else:
+			_search.pending = {}
+		return
+	if not _search.assignments.has(guard_id): return
 	var assignment: Dictionary = _search.assignments[guard_id]
 	if assignment.role == "investigator":
 		_finish_search(reason)
 	else:
-		_release_search_guard(guard_id, reason)
+		_release_search_guard(_search, guard_id, reason)
 
 func _advance_search() -> void:
 	if _search.is_empty(): return
 	if _search.deadline <= _time:
 		_finish_search("evidence_expired" if _search.evidence.expires_at <= _time else "search_timeout")
 		return
-	for guard_id: String in _search.assignments.keys():
+	var incident := _search
+	for guard_id: String in incident.assignments.keys():
 		if not _radio_alive(guard_id):
 			interrupt_search(guard_id, "guard_unavailable")
-			if _search.is_empty(): return
-	for assignment: Dictionary in _search.assignments.values():
+			if not is_same(_search, incident): return
+	for assignment: Dictionary in incident.assignments.values():
 		if assignment.role == "investigator" and assignment.state == "arrived" and _time >= assignment.arrived_at + 1.2:
 			_finish_search("area_checked")
 			return
@@ -388,26 +423,27 @@ func _advance_search() -> void:
 func _finish_search(reason: String) -> void:
 	if _search.is_empty(): return
 	var completed := reason in ["area_checked", "search_timeout", "evidence_expired"]
-	_search.state = "completed" if completed else "cancelled"
-	_emit_search(_search.state, {}, reason)
-	for guard_id: String in _search.assignments.keys():
-		_release_search_guard(guard_id, reason)
-	_search.clear()
+	var incident := _search
+	_search = {}
+	incident.state = "completed" if completed else "cancelled"
+	_emit_search(incident, incident.state, {}, reason)
+	for guard_id: String in incident.assignments.keys():
+		_release_search_guard(incident, guard_id, reason)
 
-func _release_search_guard(guard_id: String, reason: String) -> void:
-	var assignment: Dictionary = _search.assignments[guard_id]
-	_search.assignments.erase(guard_id)
+func _release_search_guard(incident: Dictionary, guard_id: String, reason: String) -> void:
+	var assignment: Dictionary = incident.assignments[guard_id]
+	incident.assignments.erase(guard_id)
 	assignment.state = "released"
-	_emit_search("released", assignment, reason)
+	_emit_search(incident, "released", assignment, reason)
 	search_assignment_changed.emit(guard_id, assignment.duplicate(true), reason)
 
-func _emit_search(event: String, assignment: Dictionary, reason: String = "") -> void:
-	var evidence: Dictionary = _search.evidence
+func _emit_search(incident: Dictionary, event: String, assignment: Dictionary, reason: String = "") -> void:
+	var evidence: Dictionary = incident.evidence
 	var position: Vector3 = evidence.position
-	var detail := {"incident_id": _search.id, "source_report_id": evidence.id,
+	var detail := {"incident_id": incident.id, "source_report_id": evidence.id,
 		"source_observation_id": evidence.observation_id, "observer_id": evidence.observer_id,
 		"position": [position.x, position.y, position.z], "observed_at": evidence.observed_at,
-		"expires_at": evidence.expires_at, "deadline": _search.deadline, "state": _search.state, "reason": reason}
+		"expires_at": evidence.expires_at, "deadline": incident.deadline, "state": incident.state, "reason": reason}
 	if not assignment.is_empty():
 		var destination: Vector3 = assignment.destination
 		detail.merge({"guard_id": assignment.guard_id, "role": assignment.role,

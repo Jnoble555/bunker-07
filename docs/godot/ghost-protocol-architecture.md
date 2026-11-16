@@ -81,3 +81,9 @@ Three short, cached synthesized spatial chirps and a depth-tested cyan chest lig
 ## Phase 3 ownership
 
 A delivered visual report accepted by its recipient can start one attempt-scoped SECURITY incident. The director tracks original provenance, deadlines, roles, arrivals and reservations. The controller requests checked paths from the room. Each guard owns its physically executed movement, real visibility checks and combat priority. Current actor membership, a successful delivery and the original evidence deadline constrain every incident. See the [search implementation](ghost-protocol-search.md) for the recorded encounter and limits.
+
+### Phase 3.1 assignment acceptance and local evidence
+
+The controller returns each actor's acceptance to the director synchronously. Pending offers cannot reserve destinations. The director keeps only accepted assignments and detaches an incident before publishing its completion or cancellation, so callbacks cannot revive its reservations. Investigator loss cancels the incident and holder loss permits solo investigation. Role cleanup is matched by mission attempt and incident ID.
+
+Normal perception retains first priority. A newer audible local shot can invalidate older coordinated movement and start a local investigation of the shot origin. Sound confidence remains local and cannot initiate a visual radio report. Reload timing stays independent of evidence priority, and deadlines continue during reload.

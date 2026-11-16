@@ -52,6 +52,38 @@ func deliver(hidden: Vector3 = B) -> Dictionary:
 	step(.8)
 	return incident()
 
+func deliver_with_acceptance(accept: Callable) -> void:
+	var director: RefCounted = game.security_director
+	director.radio_report_delivered.disconnect(game._on_security_radio_delivered)
+	var deliver_to_actor := func(recipient_id: String, report: Dictionary):
+		var now: float = game.security_simulation_time()
+		if receiver.receive_radio_report(report, now):
+			game.security_director.consider_search(report.id, recipient_id, game.attempts, game._plan_security_search, accept)
+	director.radio_report_delivered.connect(deliver_to_actor)
+	await deliver()
+	director.radio_report_delivered.disconnect(deliver_to_actor)
+	director.radio_report_delivered.connect(game._on_security_radio_delivered)
+
+func rejected_role(role: String, guard: Node3D) -> void:
+	await deliver_with_acceptance(func(guard_id: String, assignment: Dictionary) -> bool:
+		if guard_id == guard.id: guard.stagger = .22
+		return game._accept_security_search_assignment(guard_id, assignment))
+	var remaining := incident()
+	check(role + " rejects at acceptance and never owns a reservation",
+		guard._search_assignment.is_empty() and not remaining.get("assignments", {}).has(guard.id))
+	check(role + " rejection preserves only a viable investigator",
+		remaining.is_empty() if role == "investigator" else
+		remaining.assignments.size() == 1 and not receiver._search_assignment.is_empty())
+	check(role + " rejection records its reason", game.events.any(func(event):
+		return (event.event == "security_search_rejected" and event.bot_id == guard.id
+			and '"assignment_rejected"' in event.detail)))
+	var history: Array = game.security_director.get_radio_history()
+	guard.stagger = 0
+	game.security_director.consider_search(history.back().id, RIFLE, game.attempts,
+		game._plan_security_search, game._accept_security_search_assignment)
+	check(role + " rejection cannot be undone by replaying delivery", incident() == remaining
+		and guard._search_assignment.is_empty())
+
 func run() -> void:
 	game = load("res://scenes/control_room.tscn").instantiate()
 	root.add_child(game)
@@ -241,6 +273,71 @@ func run() -> void:
 	step(1.4)
 	check("busy sender leaves explicit single-guard fallback", incident().get("assignments", {}).size() == 1
 		and incident().assignments.has(RIFLE) and sender._search_assignment.is_empty())
+	await fresh()
+	await rejected_role("investigator", receiver)
+	await fresh()
+	await rejected_role("holder", sender)
+	await fresh()
+	await deliver_with_acceptance(func(guard_id: String, assignment: Dictionary) -> bool:
+		var accepted: bool = game._accept_security_search_assignment(guard_id, assignment)
+		game.security_director.interrupt_search(guard_id, "fixture_interrupt")
+		return accepted)
+	check("reentrant interruption rolls back an accepted pending role",
+		incident().is_empty() and receiver._search_assignment.is_empty() and sender._search_assignment.is_empty())
+
+	await fresh()
+	# The first sighting and this sound occur at the same simulation timestamp.
+	sender._physics_process(.016)
+	sender.hear_shot(Vector3(24, 0, 36))
+	step(.6)
+	game.player.global_position = B
+	await frames(2)
+	sender._observe_visibility(false, .016)
+	step(.8)
+	active = incident()
+	check("same-time sound cannot displace original visual evidence",
+		active.get("assignments", {}).size() == 2 and sender.last_known == sight)
+	var hearing_point := Vector3(33, 0, 18)
+	receiver.hear_shot(Vector3(1, 0, 1))
+	check("out-of-range gunfire leaves the role and visual knowledge intact",
+		incident() == active and receiver.last_known == sight)
+	var partner_memory: Vector3 = sender.last_known
+	game.player.global_position = hearing_point
+	game.player.rotation.y = PI
+	await frames(2)
+	var origin: Vector3 = game.player.camera.global_position
+	check("shot fixture is audible only to the investigator and hidden from both",
+		receiver.global_position.distance_to(origin) <= 19 and sender.global_position.distance_to(origin) > 19
+		and not receiver.can_see_player() and not sender.can_see_player())
+	game.shoot()
+	check("new gunfire cancels the investigator incident and preserves partner knowledge",
+		game.shots == 1 and incident().is_empty() and receiver._search_assignment.is_empty() and sender._search_assignment.is_empty()
+		and receiver.last_known == origin and receiver._knowledge_confidence == .6 and sender.last_known == partner_memory)
+	var sound_magazine: int = receiver.magazine
+	var sound_health: int = game.health
+	receiver._fire()
+	check("new sound cannot authorize a shot through the wall",
+		receiver.magazine == sound_magazine and game.health == sound_health)
+	receiver._decide(.016, false)
+	check("investigator paths toward the sound using local suspicion",
+		receiver.state == "suspicious" and receiver._path_target == origin and not receiver._path.is_empty())
+	game.player.global_position = B
+	await frames(2)
+	receiver._physics_process(7.1)
+	check("expired sound returns the guard to patrol", receiver.state == "patrol")
+
+	await fresh()
+	active = await deliver()
+	sender.receive_hit()
+	check("holder stagger releases only the holder", sender.hp > 0 and sender.stagger > 0
+		and sender._search_assignment.is_empty() and incident().assignments.size() == 1
+		and not receiver._search_assignment.is_empty())
+	receiver.global_position = Vector3(27,0,35)
+	receiver._path_timer = 0
+	receiver._decide(.016, false)
+	check("blocked recovery releases the investigator without snapping movement",
+		incident().is_empty() and receiver._search_assignment.is_empty()
+		and receiver.global_position == Vector3(27,0,35))
 	print("SECURITY SEARCH: %d/%d passed; failures=%d" % [checks - failures, checks, failures])
 	game.queue_free()
 	await frames(2)
