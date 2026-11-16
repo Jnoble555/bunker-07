@@ -35,6 +35,12 @@ var _previous := Vector3.ZERO
 var _observation_seen := false
 var _observation_refresh := 0.0
 var _observed_position := Vector3.ZERO
+var _visual_observation_id := 0
+var _radio_report_id := 0
+var _knowledge_time := -INF
+var _knowledge_confidence := 0.0
+var _knowledge_expires := 0.0
+var _local_clock := 0.0
 func _ready() -> void:
 	process_mode=Node.PROCESS_MODE_PAUSABLE
 	collision_layer=4
@@ -64,6 +70,13 @@ func reset_guard() -> void:
 	_observation_seen=false
 	_observation_refresh=0
 	_observed_position=Vector3.ZERO
+	_visual_observation_id=0
+	_radio_report_id=0
+	_share_timer=0
+	_knowledge_time=-INF
+	_knowledge_confidence=0
+	_knowledge_expires=0
+	_local_clock=0
 	global_position=spawn_position
 	_previous=spawn_position
 	hp=int(_spec.get("hp",5 if role=="rifle" else 4))
@@ -87,6 +100,7 @@ func reset_guard() -> void:
 	velocity=Vector3.ZERO
 	rotation.y=float(_spec.get("facing",0.0))
 	_visual.pose(state,false,0,true)
+	_visual.set_radio_transmitting(false)
 func capacity() -> int: return 9 if role=="rifle" else 15
 func eye() -> Vector3: return global_position+Vector3.UP*1.45
 func visible_point(point:Vector3) -> bool:
@@ -98,13 +112,17 @@ func can_see_player() -> bool:
 	if state=="patrol" and offset.length()>3 and -global_basis.z.dot(offset.normalized())<.15: return false
 	return visible_point(_player_eye())
 func hear_shot(at:Vector3,shared:bool=false,record_sound:bool=true) -> void:
+	# Retain the call signature for compatibility, but reject the retired sharing shortcut.
+	if shared: return
 	if hp<=0 or global_position.distance_to(at)>(12.0 if shared else 19.0): return
-	# Legacy ally reports and live-camera hit reactions are not genuine sound evidence.
 	if not shared and record_sound: _report_observation("sound_contact",at,.6,7.0)
 	# Sound supplies a location, never continuous access to the hidden player.
 	if state!="engage":
 		last_known=at
 		memory_remaining=7.0
+		_knowledge_time=_simulation_time()
+		_knowledge_confidence=.6
+		_knowledge_expires=_knowledge_time+7.0
 		_transition("suspicious")
 func receive_hit(amount:int=1) -> void:
 	if hp<=0 or not controller.active or get_tree().paused: return
@@ -115,19 +133,23 @@ func receive_hit(amount:int=1) -> void:
 	_compromised_cover=global_position
 	_cover=Vector3.INF
 	controller.register_event("guard_hit",str(hp),id)
+	if controller.has_method("interrupt_security_radio"):
+		controller.interrupt_security_radio(self,"death" if hp==0 else "hit_stagger")
 	if hp==0:
 		collision_layer=0
 		velocity=Vector3.ZERO
 		_visual.hide()
 		controller.register_event("bot_disabled",id,id)
-	else:
-		hear_shot(_player_eye(),false,false)
+	elif state=="patrol":
+		# Impact supplies suspicion, never a fabricated source/camera position.
+		_transition("suspicious")
 func _transition(next:String) -> void:
 	if state==next: return
 	state=next
 	controller.register_event("enemy_state",state,id)
 func _physics_process(delta:float) -> void:
 	if not controller or not controller.active or hp<=0: return
+	_local_clock+=delta
 	velocity.x=0
 	velocity.z=0
 	_flash=maxf(0,_flash-delta)
@@ -141,11 +163,12 @@ func _physics_process(delta:float) -> void:
 	if seen:
 		last_known=_player_eye()
 		memory_remaining=8
+		_knowledge_time=_simulation_time()
+		_knowledge_confidence=1.0
+		_knowledge_expires=_knowledge_time+8.0
 		_reaction+=delta
-		if _share_timer==0:
-			for ally in controller.enemies:
-				if ally!=self and ally.has_method("hear_shot") and global_position.distance_to(ally.global_position)<9:
-					ally.hear_shot(last_known,true)
+		if _share_timer==0 and stagger==0 and controller.has_method("queue_security_radio"):
+			controller.queue_security_radio(self,_visual_observation_id)
 			_share_timer=2.0
 	else:
 		memory_remaining=maxf(0,memory_remaining-delta)
@@ -163,15 +186,39 @@ func _physics_process(delta:float) -> void:
 	_step_up(Vector3(velocity.x,0,velocity.z)*delta)
 	move_and_slide()
 	_visual.pose(state,_flash>0,attack_windup,hp>0)
-func _report_observation(kind:String,at:Vector3,confidence:float,ttl:float) -> void:
+func _report_observation(kind:String,at:Vector3,confidence:float,ttl:float) -> int:
 	if controller.has_method("record_security_observation"):
-		controller.record_security_observation(self,kind,at,confidence,ttl)
+		return controller.record_security_observation(self,kind,at,confidence,ttl)
+	return 0
+func _simulation_time() -> float:
+	return controller.security_simulation_time() if controller.has_method("security_simulation_time") else _local_clock
+func set_radio_transmitting(report_id:int) -> void:
+	_radio_report_id=report_id
+	if is_instance_valid(_visual): _visual.set_radio_transmitting(report_id>0)
+func receive_radio_report(report:Dictionary,now:float) -> bool:
+	if hp<=0 or not controller.active or get_tree().paused: return false
+	if not controller.has_method("security_radio_attempt_id") or report.get("attempt_id",0)!=controller.security_radio_attempt_id(): return false
+	if report.get("status","")!="delivered" or report.get("sender_id","")==id: return false
+	var at:Variant=report.get("position")
+	var observed:float=float(report.get("observed_at",INF))
+	var confidence:float=float(report.get("confidence",-1))
+	var expires:float=float(report.get("expires_at",-INF))
+	if not at is Vector3 or not at.is_finite() or not is_finite(observed) or observed>now: return false
+	if not is_finite(expires) or expires<=now or not is_finite(confidence) or confidence<0 or confidence>1: return false
+	if _knowledge_expires>now and (_knowledge_time>=observed or _knowledge_confidence>confidence): return false
+	last_known=at
+	memory_remaining=expires-now
+	_knowledge_time=observed
+	_knowledge_confidence=confidence
+	_knowledge_expires=expires
+	if state!="reload": _transition("suspicious")
+	return true
 func _observe_visibility(seen:bool,delta:float) -> void:
 	if seen:
 		_observation_refresh=maxf(0,_observation_refresh-delta)
 		_observed_position=_player_eye()
 		if not _observation_seen or _observation_refresh==0:
-			_report_observation("visual_contact",_observed_position,1.0,8.0)
+			_visual_observation_id=_report_observation("visual_contact",_observed_position,1.0,8.0)
 			_observation_refresh=1.0
 	elif _observation_seen:
 		# Use the last visually observed point, never the now-hidden camera or ally memory.

@@ -92,9 +92,9 @@ func run() -> void:
 	enemy.hear_shot(Vector3(48,0,48))
 	check("inaudible event is not recorded",director.get_active_observations().size()==count)
 	enemy.hear_shot(Vector3(20,0,24),true)
-	check("legacy ally sharing still changes memory but is not sound evidence",enemy.last_known==Vector3(20,0,24) and director.get_active_observations().size()==count)
+	check("retired ally shortcut cannot change memory or produce sound evidence",enemy.last_known==sound and director.get_active_observations().size()==count)
 	enemy.receive_hit(1)
-	check("legacy hidden-camera hit reaction preserved without legitimizing evidence",enemy.last_known==game.player.camera.global_position and director.get_active_observations().size()==count)
+	check("hidden-camera hit leak removed without fabricating evidence",enemy.last_known==sound and enemy.last_known!=game.player.camera.global_position and director.get_active_observations().size()==count)
 	# Exercise the real shot broadcast with no pellet collision required.
 	game.player.global_position=Vector3(18,0,19)
 	game.player.camera.rotation=Vector3.ZERO

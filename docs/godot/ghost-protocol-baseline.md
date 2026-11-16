@@ -1,6 +1,6 @@
 # GHOST PROTOCOL: Phase 0 baseline
 
-Historical Phase 0 findings and results below are preserved. Phase 1 now adds a passive recorder only; see the current [architecture](ghost-protocol-architecture.md) and [test results](ghost-protocol-test-plan.md). Gameplay risks identified here remain intentionally unfixed.
+Historical Phase 0 findings and results below are preserved. Phase 1 now adds a passive recorder only; see the current [architecture](ghost-protocol-architecture.md) and [test results](ghost-protocol-test-plan.md). This is a historical baseline: Phase 2 now replaces immediate sharing for the SECURITY pair and removes the hidden-camera hit leak; see [radio implementation and verification](ghost-protocol-radio.md). Other historical findings remain the reference for unchanged local AI.
 
 Audit date: 2026-11-15 (America/New_York). Source baseline: `0b50af7dec29daf432bfa10432501e888069d48f`. Initial working tree was clean. Scope: local source tracing and existing headless tests; no gameplay changes, new enemies, director implementation or difficulty tuning. [Architecture](ghost-protocol-architecture.md) and [test plan](ghost-protocol-test-plan.md) define future work.
 
