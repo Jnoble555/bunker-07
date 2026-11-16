@@ -12,8 +12,6 @@ from validate_web import validate
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "scripts/godot-version.txt").read_text().strip()
 GENERATED = (
-    "godot/assets/weapons/security_shotgun.glb.import",
-    "godot/assets/weapons/security_smg.glb.import",
     "godot/tests/campaign-results.json", "godot/tests/milestone-results.json",
 )
 
@@ -22,10 +20,11 @@ def build(godot, output, commit):
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     if not re.fullmatch(r"[0-9a-f]{40}", commit) or head != commit:
         raise ValueError("Build commit must equal the full current Git HEAD SHA")
-    status = subprocess.check_output(
-        ["git", "status", "--porcelain", "--untracked-files=normal", "--", ".",
-         *(f":(exclude){path}" for path in GENERATED)], cwd=ROOT, text=True)
-    if status.strip():
+    source_paths = [".", *(f":(exclude){path}" for path in GENERATED)]
+    changed = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", *source_paths], cwd=ROOT)
+    untracked = subprocess.check_output(
+        ["git", "ls-files", "--others", "--exclude-standard", "--", *source_paths], cwd=ROOT, text=True)
+    if changed.returncode != 0 or untracked.strip():
         raise ValueError("Commit reviewed source before building; working tree has source changes")
     output = output.resolve()
     if output == ROOT or output == ROOT / "godot" or (ROOT / "godot") in output.parents:

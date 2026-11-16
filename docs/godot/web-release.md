@@ -44,7 +44,7 @@ python -m http.server 8765 --bind 127.0.0.1 --directory (Join-Path $releaseDir '
 
 Open http://127.0.0.1:8765/ in a WebGL 2 capable desktop browser; `file://` is unsupported. On Linux/macOS with matching templates installed, `scripts/build_web.sh "$PWD/work/site"` invokes the same Python build implementation. Set `GODOT_BIN` to override the executable. Outputs under `work/` or `_site/` and Python caches are ignored.
 
-Builds require a full Git HEAD SHA and clean source. Only four known engine/test-generated import/result files are excluded from the source-dirty check; restore them after tests for a clean final working tree. Export is rejected when the editor version differs from the pin. The build imports with `--quit`, exports preset `Web`, stages classic assets, injects identity and validates the complete artifact. Do not label an uncommitted working tree as a released commit.
+Builds require a full Git HEAD SHA and clean source. Only the two test-generated result JSON files (excluded from the game export) are exempt from the source-dirty check. Meaningful changes to import configuration remain source changes; Git handles harmless line-ending differences. Restore generated import/result files after tests for a clean final working tree. Export is rejected when the editor version differs from the pin. The build imports with `--quit`, exports preset `Web`, stages classic assets, injects identity and validates the complete artifact. Do not label an uncommitted working tree as a released commit.
 
 CI runs all 14 Phase 0 programs plus the two director suites using isolated writable application data; it fails on nonzero exit, script/assertion errors, unexpected engine errors or timeout. The known host certificate-store warning is recorded but does not fail offline tests. Tests and log evidence upload precede the Pages artifact. PR artifacts identify the tested synthetic merge commit; approved main builds identify the actual deployed main commit.
 
@@ -58,7 +58,11 @@ CI runs all 14 Phase 0 programs plus the two director suites using isolated writ
 
 The release-preparation audit reran all 16 Godot programs: **328 passing assertions plus orderly-close smoke**, zero assertion failures. Captured mouse was explicitly skipped headlessly. The root certificate-store read error remains an environment diagnostic. Packaging tool tests passed **10/10** (complete build, stale SHA, wrong engine, missing WASM, corrupted assets, classic root, threaded flag, invalid source marker and WASM header cases).
 
-Matching official templates are installed in the isolated build profile and checksum-verified. Exact committed-source export verification is pending the release tooling commit; no new public/browser success is asserted at this checkpoint.
+A complete committed-source export succeeded with Godot `4.7.2.stable.official.ed1daf0bf` and matching nonthreaded templates, exit 0. The first release-tooling build identified commit `e4d92f880c01038cba88f05c331374bf327efd85`; subsequent documentation commits must be rebuilt, never relabeled. The final candidate's authoritative SHA is emitted by the build and stored in its manifest.
+
+Actual local HTTP asset checks returned 200 for HTML (6,659 bytes), engine JS (279,815), WASM (39,514,754, `application/wasm`), PCK (655,008), classic HTML (4,283), plus classic JS/CSS. Downloaded bytes matched the build manifest hashes. The PCK includes `security_director.gd` compiled/remapped resources, and the Godot entry point remains `scenes/control_room.tscn`. Export logs and build files remain under `$env:TEMP\bunker07-release`, outside Git. These are export/HTTP checks, not browser gameplay claims.
+
+The public classic root was also byte-compared with the classic `index.html` at current `origin/main`; they match after normalizing line endings. Public HTML SHA256 at audit: `537632fd65da323ffabbd73ef32a964320c145d63b1eff9b5c4d6f5a063ed538`.
 
 Browser access host was unavailable when actual browser verification was attempted. No new public deployment has occurred during preparation. Do not infer title rendering, Deep Signal input/combat, restart behavior or console cleanliness in a browser from native tests/export/HTTP validation. These remain release checks after approval:
 
