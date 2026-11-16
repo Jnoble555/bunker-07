@@ -4,6 +4,8 @@ const OperationRoom = preload("res://scripts/tactical_operation_room.gd")
 const DeepSignalEnemy = preload("res://scripts/deep_signal_enemy.gd")
 const SecurityDirector = preload("res://scripts/security_director.gd")
 var security_director: RefCounted
+const SECURITY_RADIO_PARTNERS := {"security-smg":"security-rifle", "security-rifle":"security-smg"}
+const SECURITY_RADIO_DELAY := 1.4
 var operation_mode := false
 var operation_stage := 0
 var deep_signal_button: Button
@@ -230,7 +232,10 @@ func start_run() -> void:
 	if operation_mode:
 		security_director = SecurityDirector.new()
 		security_director.telemetry_event.connect(_on_security_telemetry)
-		security_director.initialize_for_mission(str(mission.id))
+		security_director.radio_report_changed.connect(_on_security_radio_changed)
+		security_director.radio_report_delivered.connect(_on_security_radio_delivered)
+		security_director.initialize_for_mission(str(mission.id),attempts)
+		_sync_security_radio()
 	register_event("mission_start","")
 	last_result = {}
 	last_won = false
@@ -263,7 +268,6 @@ func set_paused(value: bool) -> void:
 func _physics_process(delta: float) -> void:
 	if not active or get_tree().paused: return
 	elapsed += delta
-	if security_director: security_director.advance(delta)
 	cooldown = maxf(0,cooldown-delta)
 	flash = maxf(0,flash-delta)
 	hit_feedback = maxf(0,hit_feedback-delta)
@@ -290,6 +294,8 @@ func _physics_process(delta: float) -> void:
 			"weapon_2": switch_weapon("smg")
 			"weapon_3": switch_weapon("shotgun")
 	if get_weapon_def().automatic and Input.is_action_pressed("fire"): shoot()
+	# Resolve this tick's player hits before reports complete, so interruption wins ties.
+	_advance_security_director(delta)
 	systems.update(delta)
 	if not active: return
 	if mission.id=="control-room":
@@ -494,6 +500,10 @@ func register_event(event: String,detail: String="",bot_id: String="") -> void:
 
 func _clear_security_director() -> void:
 	if not security_director: return
+	security_director.radio_report_changed.disconnect(_on_security_radio_changed)
+	security_director.radio_report_delivered.disconnect(_on_security_radio_delivered)
+	for enemy in enemies:
+		if is_instance_valid(enemy) and enemy.has_method("set_radio_transmitting"): enemy.set_radio_transmitting(0)
 	security_director.clear()
 	security_director.telemetry_event.disconnect(_on_security_telemetry)
 	security_director = null
@@ -501,10 +511,66 @@ func _clear_security_director() -> void:
 func _on_security_telemetry(event: String, detail: Dictionary) -> void:
 	register_event(event, JSON.stringify(detail), str(detail.get("observer_id", "")))
 
-func record_security_observation(enemy: Node, kind: String, at: Vector3, confidence: float, ttl: float) -> void:
+func record_security_observation(enemy: Node, kind: String, at: Vector3, confidence: float, ttl: float) -> int:
+	if not security_director or not active or get_tree().paused: return 0
+	if not is_instance_valid(enemy) or not enemies.has(enemy) or enemy.hp <= 0: return 0
+	return security_director.record_observation(str(enemy.id), kind, at, confidence, ttl)
+
+func security_simulation_time() -> float:
+	return security_director.get_simulation_time() if security_director else elapsed
+
+func security_radio_attempt_id() -> int:
+	return security_director.get_attempt_id() if security_director else 0
+
+func _security_enemy_by_id(enemy_id: String) -> Node:
+	var result: Node = null
+	for enemy in enemies:
+		if is_instance_valid(enemy) and enemy.id == enemy_id:
+			if result: return null # Ambiguous IDs are never legitimate radio identities.
+			result = enemy
+	return result
+
+func _sync_security_radio() -> void:
+	if not security_director: return
+	var actors := {}
+	for enemy_id: String in SECURITY_RADIO_PARTNERS:
+		var enemy := _security_enemy_by_id(enemy_id)
+		if enemy:
+			actors[enemy_id] = {"position":enemy.global_position,"alive":enemy.hp>0 and not enemy.is_queued_for_deletion(),"interrupted":enemy.stagger>0}
+	security_director.sync_radio_actors(actors)
+
+func _advance_security_director(delta: float) -> void:
 	if not security_director or not active or get_tree().paused: return
-	if not is_instance_valid(enemy) or not enemies.has(enemy) or enemy.hp <= 0: return
-	security_director.record_observation(str(enemy.id), kind, at, confidence, ttl)
+	_sync_security_radio()
+	security_director.advance(delta)
+
+func queue_security_radio(enemy: Node, observation_id: int) -> int:
+	if not security_director or not active or get_tree().paused: return 0
+	if not is_instance_valid(enemy) or not SECURITY_RADIO_PARTNERS.has(enemy.id): return 0
+	if _security_enemy_by_id(str(enemy.id)) != enemy or enemy.hp<=0 or enemy.stagger>0: return 0
+	_sync_security_radio()
+	return security_director.queue_radio_report(str(enemy.id),observation_id,[SECURITY_RADIO_PARTNERS[enemy.id]],SECURITY_RADIO_DELAY)
+
+func interrupt_security_radio(enemy: Node, reason: String) -> void:
+	if security_director and is_instance_valid(enemy) and enemies.has(enemy):
+		security_director.cancel_reports_from(str(enemy.id),reason)
+
+func _on_security_radio_changed(report: Dictionary) -> void:
+	if not security_director or report.attempt_id != attempts: return
+	var sender := _security_enemy_by_id(str(report.sender_id))
+	if not sender: return
+	sender.set_radio_transmitting(int(report.id) if report.status=="pending" else 0)
+	var sound := "radio_start" if report.status=="pending" else "radio_success" if report.status=="delivered" else "radio_interrupted"
+	play_sound(sound,sender.global_position)
+
+func _on_security_radio_delivered(recipient_id: String, report: Dictionary) -> void:
+	if not security_director or not active or get_tree().paused or report.attempt_id != attempts: return
+	var sender := _security_enemy_by_id(str(report.sender_id))
+	var recipient := _security_enemy_by_id(recipient_id)
+	if not sender or not recipient or sender==recipient or sender.hp<=0 or recipient.hp<=0 or sender.stagger>0: return
+	if sender.is_queued_for_deletion() or recipient.is_queued_for_deletion(): return
+	if sender.global_position.distance_to(recipient.global_position)>SecurityDirector.RADIO_RANGE: return
+	recipient.receive_radio_report(report,security_director.get_simulation_time())
 
 func export_csv(path: String="") -> String:
 	var destination: String = "user://bunker-07-session.csv" if path=="" else path

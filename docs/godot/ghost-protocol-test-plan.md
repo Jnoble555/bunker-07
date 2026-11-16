@@ -1,5 +1,7 @@
 # GHOST PROTOCOL: verification plan
 
+Phase 2 current results and the tested radio acceptance matrix are in [ghost-protocol-radio.md](ghost-protocol-radio.md). The sections below preserve the original Phase 0/1 plan and results; delayed radio is now implemented/tested, while assignments, coordinated search and de-escalation remain future work. The runner now includes 18 programs.
+
 Phase 1 implements a real passive director and two SceneTree test programs. The automation results below describe executed checks; the later behavior matrix remains future work. No mock radio/planner or existing regression assertion changes were introduced.
 
 ## Future behavior acceptance matrix (not implemented or executed)

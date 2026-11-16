@@ -1,5 +1,7 @@
 # GitHub Pages: Godot release procedure
 
+Release checkpoint: owner-approved Phase 1 is live at `40567cb441f65b7d2f78ca2983ba6e521f9ff034`, with Pages configured to GitHub Actions. The stale-site audit below is historical. Phase 2 radio changes remain on a feature branch pending a separate approval; [radio verification](ghost-protocol-radio.md) records the explicitly blocked browser smoke gate. CI now runs 18 Godot programs.
+
 ## Public URL and verified stale-game cause
 
 Public game: https://jnoble555.github.io/bunker-07/ . Hosting was verified on 2026-11-16 from GitHub Pages settings and HTTP response headers (`Server: GitHub.com`, `X-GitHub-Request-Id`). No custom domain is configured.

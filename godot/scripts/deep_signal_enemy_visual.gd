@@ -3,6 +3,8 @@ extends Node3D
 var flash: MeshInstance3D
 var status: StandardMaterial3D
 var gun: Node3D
+var radio_indicator: MeshInstance3D
+var radio_label: Label3D
 func _ready() -> void:
 	status = material(Color("407d85"))
 	box(Vector3(.55,.75,.35),Vector3(0,1,0),material(Color("303c43")))
@@ -19,6 +21,20 @@ func _ready() -> void:
 	box(Vector3(.09,.2,.12),Vector3(0,-.13,.05),material(Color("242a30")),gun)
 	flash=box(Vector3(.15,.15,.11),Vector3(0,0,-.51),material(Color("ffc469"),true),gun)
 	flash.hide()
+	radio_indicator=box(Vector3(.11,.11,.05),Vector3(-.28,1.3,-.2),material(Color("65e5ff"),true))
+	radio_label=Label3D.new()
+	radio_label.text="RADIO"
+	radio_label.position=Vector3(.65,1.95,0)
+	radio_label.font_size=26
+	radio_label.pixel_size=.0035
+	radio_label.modulate=Color("65e5ff")
+	radio_label.billboard=BaseMaterial3D.BILLBOARD_ENABLED
+	radio_label.no_depth_test=false
+	add_child(radio_label)
+	set_radio_transmitting(false)
+func set_radio_transmitting(transmitting:bool) -> void:
+	if is_instance_valid(radio_indicator): radio_indicator.visible=transmitting
+	if is_instance_valid(radio_label): radio_label.visible=transmitting
 func configure(role:String) -> void:
 	if role=="rifle": gun.scale.z=1.35
 func pose(state:String, firing:bool, windup:float, alive:bool) -> void:
