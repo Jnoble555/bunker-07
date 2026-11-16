@@ -32,6 +32,9 @@ var _path_timer := 0.0
 var _path_target := Vector3.INF
 var _stuck := 0.0
 var _previous := Vector3.ZERO
+var _observation_seen := false
+var _observation_refresh := 0.0
+var _observed_position := Vector3.ZERO
 func _ready() -> void:
 	process_mode=Node.PROCESS_MODE_PAUSABLE
 	collision_layer=4
@@ -58,6 +61,9 @@ func setup(owner_controller:Node,spawn:Vector3,spec:Dictionary={}) -> void:
 	_visual.configure(role)
 	reset_guard()
 func reset_guard() -> void:
+	_observation_seen=false
+	_observation_refresh=0
+	_observed_position=Vector3.ZERO
 	global_position=spawn_position
 	_previous=spawn_position
 	hp=int(_spec.get("hp",5 if role=="rifle" else 4))
@@ -91,8 +97,10 @@ func can_see_player() -> bool:
 	if offset.length()> (28.0 if role=="rifle" else 21.0): return false
 	if state=="patrol" and offset.length()>3 and -global_basis.z.dot(offset.normalized())<.15: return false
 	return visible_point(_player_eye())
-func hear_shot(at:Vector3,shared:bool=false) -> void:
+func hear_shot(at:Vector3,shared:bool=false,record_sound:bool=true) -> void:
 	if hp<=0 or global_position.distance_to(at)>(12.0 if shared else 19.0): return
+	# Legacy ally reports and live-camera hit reactions are not genuine sound evidence.
+	if not shared and record_sound: _report_observation("sound_contact",at,.6,7.0)
 	# Sound supplies a location, never continuous access to the hidden player.
 	if state!="engage":
 		last_known=at
@@ -113,7 +121,7 @@ func receive_hit(amount:int=1) -> void:
 		_visual.hide()
 		controller.register_event("bot_disabled",id,id)
 	else:
-		hear_shot(_player_eye())
+		hear_shot(_player_eye(),false,false)
 func _transition(next:String) -> void:
 	if state==next: return
 	state=next
@@ -129,6 +137,7 @@ func _physics_process(delta:float) -> void:
 	_path_timer=maxf(0,_path_timer-delta)
 	_reposition=maxf(0,_reposition-delta)
 	var seen:=can_see_player()
+	_observe_visibility(seen,delta)
 	if seen:
 		last_known=_player_eye()
 		memory_remaining=8
@@ -154,6 +163,20 @@ func _physics_process(delta:float) -> void:
 	_step_up(Vector3(velocity.x,0,velocity.z)*delta)
 	move_and_slide()
 	_visual.pose(state,_flash>0,attack_windup,hp>0)
+func _report_observation(kind:String,at:Vector3,confidence:float,ttl:float) -> void:
+	if controller.has_method("record_security_observation"):
+		controller.record_security_observation(self,kind,at,confidence,ttl)
+func _observe_visibility(seen:bool,delta:float) -> void:
+	if seen:
+		_observation_refresh=maxf(0,_observation_refresh-delta)
+		_observed_position=_player_eye()
+		if not _observation_seen or _observation_refresh==0:
+			_report_observation("visual_contact",_observed_position,1.0,8.0)
+			_observation_refresh=1.0
+	elif _observation_seen:
+		# Use the last visually observed point, never the now-hidden camera or ally memory.
+		_report_observation("visual_lost",_observed_position,1.0,8.0)
+	_observation_seen=seen
 func _decide(delta:float,seen:bool) -> void:
 	if magazine<=0:
 		_transition("reload")

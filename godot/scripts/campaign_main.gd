@@ -2,6 +2,8 @@ extends "res://scripts/main.gd"
 const OperationData = preload("res://scripts/tactical_operation_data.gd")
 const OperationRoom = preload("res://scripts/tactical_operation_room.gd")
 const DeepSignalEnemy = preload("res://scripts/deep_signal_enemy.gd")
+const SecurityDirector = preload("res://scripts/security_director.gd")
+var security_director: RefCounted
 var operation_mode := false
 var operation_stage := 0
 var deep_signal_button: Button
@@ -72,6 +74,7 @@ func _ready() -> void:
 	show_title()
 
 func _exit_tree() -> void:
+	_clear_security_director()
 	# Explicitly detach streams before the audio server outlives scene teardown.
 	if audio: audio.shutdown()
 
@@ -84,6 +87,7 @@ func _notification(what: int) -> void:
 func _quit_safely() -> void:
 	if quitting: return
 	quitting = true
+	_clear_security_director()
 	active = false
 	pending_actions.clear()
 	get_tree().paused = true
@@ -94,6 +98,7 @@ func _quit_safely() -> void:
 	get_tree().quit()
 
 func _load_mission() -> void:
+	_clear_security_director()
 	mission = missions[mission_index].duplicate(true)
 	for enemy in enemies:
 		if is_instance_valid(enemy): enemy.free()
@@ -169,6 +174,7 @@ func new_campaign() -> void:
 	show_briefing()
 
 func show_briefing() -> void:
+	_clear_security_director()
 	active = false
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -189,6 +195,7 @@ func advance_campaign() -> void:
 	else: new_campaign()
 
 func start_run() -> void:
+	_clear_security_director()
 	active = false
 	if audio: audio.stop_all()
 	get_tree().paused = false
@@ -219,6 +226,11 @@ func start_run() -> void:
 	systems.reset()
 	make_pickups()
 	attempts += 1
+	# Setup/reset emits no observations. Initialize before activating actor physics.
+	if operation_mode:
+		security_director = SecurityDirector.new()
+		security_director.telemetry_event.connect(_on_security_telemetry)
+		security_director.initialize_for_mission(str(mission.id))
 	register_event("mission_start","")
 	last_result = {}
 	last_won = false
@@ -236,6 +248,7 @@ func retry_run() -> void:
 	start_run()
 
 func show_title() -> void:
+	_clear_security_director()
 	active = false
 	get_tree().paused = false
 	pending_actions.clear()
@@ -250,6 +263,7 @@ func set_paused(value: bool) -> void:
 func _physics_process(delta: float) -> void:
 	if not active or get_tree().paused: return
 	elapsed += delta
+	if security_director: security_director.advance(delta)
 	cooldown = maxf(0,cooldown-delta)
 	flash = maxf(0,flash-delta)
 	hit_feedback = maxf(0,hit_feedback-delta)
@@ -440,6 +454,7 @@ func remaining() -> int:
 
 func finish(won: bool) -> void:
 	if not active: return
+	_clear_security_director()
 	register_event("mission_clear" if won else "mission_failed","failure" if not won else "alarm" if mission.id=="control-room" and alarm_triggered else "stealth" if mission.id=="control-room" else "clear")
 	last_won = won
 	last_result = session.commit(mission,_snapshot(),won)
@@ -476,6 +491,20 @@ func register_event(event: String,detail: String="",bot_id: String="") -> void:
 					bot_id = str(i+1)
 					break
 	events.append({"run":attempts,"elapsed_seconds":"%.2f" % elapsed,"event":event,"bot_id":bot_id,"health":health,"ammo":ammo,"shots":shots,"hits":hits,"detail":detail,"mission_id":mission.get("id","")})
+
+func _clear_security_director() -> void:
+	if not security_director: return
+	security_director.clear()
+	security_director.telemetry_event.disconnect(_on_security_telemetry)
+	security_director = null
+
+func _on_security_telemetry(event: String, detail: Dictionary) -> void:
+	register_event(event, JSON.stringify(detail), str(detail.get("observer_id", "")))
+
+func record_security_observation(enemy: Node, kind: String, at: Vector3, confidence: float, ttl: float) -> void:
+	if not security_director or not active or get_tree().paused: return
+	if not is_instance_valid(enemy) or not enemies.has(enemy) or enemy.hp <= 0: return
+	security_director.record_observation(str(enemy.id), kind, at, confidence, ttl)
 
 func export_csv(path: String="") -> String:
 	var destination: String = "user://bunker-07-session.csv" if path=="" else path
@@ -812,5 +841,6 @@ func pickup_specs() -> Array[Dictionary]:
 
 
 func _launch_operation() -> void:
+	_clear_security_director()
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/tactical_operation.tscn")
