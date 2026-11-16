@@ -1,6 +1,6 @@
 # Bunker 07
 
-**[Play the updated 3D game](https://jnoble555.github.io/bunker-07/)** — choose **Tactical Operation / Sector 12** for Iron Relay or **Deep Signal / Tactical Operation**. The [original JavaScript edition](https://jnoble555.github.io/bunker-07/classic.html) remains available. Pages now builds the Godot project automatically; see [web release details](docs/godot/web-release.md).
+**[Play the updated 3D game](https://jnoble555.github.io/bunker-07/)** — choose **Tactical Operation / Sector 12** for Iron Relay or **Deep Signal / Tactical Operation**. The [original JavaScript edition](https://jnoble555.github.io/bunker-07/classic.html) remains available. The intended release uses a tested Godot Actions build; the hosting audit and required Pages source setting are documented in [web release details](docs/godot/web-release.md). The menu footer build ID and `build-info.json` identify the deployed source commit.
 
 A **three-mission Godot campaign preview** is available in [`godot/`](godot/README.md), including reactive security, tactical devices, optional objectives and campaign consequences. The browser version below remains the behavioral reference. See [native parity and limits](docs/godot/parity.md) and [release verification](docs/godot/campaign-release.md).
 

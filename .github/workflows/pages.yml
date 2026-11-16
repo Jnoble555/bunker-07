@@ -1,41 +1,75 @@
-name: Publish updated Godot game
+name: Validate and publish Godot game
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Publish the approved main commit to GitHub Pages'
+        type: boolean
+        default: false
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
-  group: github-pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Install pinned Godot and web templates
+      - name: Read tested engine version
+        id: engine
+        run: echo "version=$(cat scripts/godot-version.txt)" >> "$GITHUB_OUTPUT"
+      - name: Install matching official Godot and web templates
         env:
-          GODOT_VERSION: 4.6.3
+          GODOT_VERSION: ${{ steps.engine.outputs.version }}
         run: |
           set -euo pipefail
           release="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
-          curl --fail --location --retry 3 "$release/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip
-          unzip -q /tmp/godot.zip -d /tmp/godot
+          mkdir -p /tmp/godot
+          curl --fail --location --retry 3 "$release/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot/engine.zip
+          curl --fail --location --retry 3 "$release/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/godot/templates.tpz
+          echo 'cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  /tmp/godot/engine.zip' | sha256sum --check
+          echo 'f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011  /tmp/godot/templates.tpz' | sha256sum --check
+          unzip -q /tmp/godot/engine.zip -d /tmp/godot
           sudo install /tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
-          curl --fail --location --retry 3 "$release/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
           mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          unzip -j -q /tmp/templates.tpz 'templates/web_nothreads_release.zip' -d "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          rm /tmp/templates.tpz
-      - name: Build updated game and preserve classic edition
-        run: scripts/build_web.sh "$PWD/_site"
+          unzip -j -q /tmp/godot/templates.tpz 'templates/web_nothreads_release.zip' 'templates/web_nothreads_debug.zip' -d "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          godot --version
+      - name: Import project
+        run: godot --headless --path godot --editor --import --quit
+      - name: Verify packaging tools
+        run: python3 -m unittest discover -s tests -p test_web_build.py -v
+      - name: Run all 16 Godot regression programs
+        run: python3 scripts/run_godot_tests.py --godot godot --logs "$RUNNER_TEMP/godot-test-logs"
+      - name: Export and validate exact checked-out commit
+        run: python3 scripts/build_web.py --godot godot --output "$PWD/_site" --commit "$GITHUB_SHA"
+      - name: Upload regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-test-logs
+          path: ${{ runner.temp }}/godot-test-logs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      - name: Report artifact identity
+        run: |
+          echo "Validated source: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          cat _site/build-info.json >> "$GITHUB_STEP_SUMMARY"
   deploy:
+    # Feature branches and pull requests only validate/upload; they never publish.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -43,3 +77,11 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Report deployed source and URL
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          echo "Deployed source: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Public URL: $PAGE_URL" >> "$GITHUB_STEP_SUMMARY"
+          curl --fail --location --retry 5 --retry-delay 10 "${PAGE_URL}build-info.json?sha=$GITHUB_SHA" -o /tmp/deployed-build-info.json
+          python3 -c 'import json,os; assert json.load(open("/tmp/deployed-build-info.json"))["source_commit"] == os.environ["GITHUB_SHA"]'
