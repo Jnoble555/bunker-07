@@ -7,6 +7,7 @@ var _voices: Array[AudioStreamPlayer3D] = []
 const RATE: int = 22050
 const SOUNDS: Dictionary = {
 	"fire": [720.0, 155.0, 0.12, 0.24],
+	"rifle_fire": [520.0, 65.0, 0.16, 0.23],
 	"smg_fire": [1050.0, 90.0, 0.075, 0.19],
 	"shotgun_fire": preload("res://scripts/shotgun_sound.gd").SPEC,
 	"hit": [190.0, 48.0, 0.18, 0.22],

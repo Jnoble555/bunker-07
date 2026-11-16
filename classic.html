@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bunker 07</title>
+<link rel="stylesheet" href="styles/game.css">
+<main>
+<header><strong>BUNKER 07</strong><span class="label">RETRO FPS / TRAINING SIM</span></header>
+<div id="stage">
+<canvas id="view" width="480" height="270" aria-label="First-person bunker view"></canvas>
+<div id="radio" role="status" aria-live="polite" hidden></div>
+<div id="tutorial" role="status" aria-live="polite" hidden></div>
+<div id="overlay"><section>
+  <section id="title-screen"><div class="label">RETRO FPS / THREE-MISSION CAMPAIGN</div><h1>BUNKER 07</h1><p>Breach the training sector, secure Control Room, and restore power to the Blackout extraction lift.</p><nav><button id="start-campaign">Start Campaign</button><button id="open-controls">Controls</button><button id="open-settings">Settings</button></nav></section>
+  <section id="controls-screen" hidden><div class="label">FIELD MANUAL</div><h1>CONTROLS</h1><p>WASD or ↑/↓ move · Mouse or ←/→ aim · Click or Space fire · R reload · E interact · J field log · P or Esc pause</p><p>Move away or break line of sight when a bot winds up an attack.</p><nav><button id="controls-back">Back</button></nav></section>
+  <section id="settings-screen" hidden><div class="label">PREFERENCES</div><h1>SETTINGS</h1><form id="settings-form">
+    <label for="volume">Master volume</label><span><input id="volume" type="range" min="0" max="1" step="0.05"><output id="volume-value" for="volume"></output></span>
+    <label class="toggle" for="mute"><input id="mute" type="checkbox"> Mute sound</label>
+    <label for="sensitivity">Mouse sensitivity</label><span><input id="sensitivity" type="range" min="0.0005" max="0.01" step="0.0005"><output id="sensitivity-value" for="sensitivity"></output></span>
+  </form><nav><button id="reset-settings">Reset to defaults</button><button id="settings-back">Back</button></nav></section>
+  <section id="pause-screen" hidden><div class="label">RUN PAUSED</div><h1>PAUSED</h1><nav><button id="resume">Resume</button><button id="pause-settings">Settings</button><button id="open-journal">Field Log [J]</button><button id="return-title">Return to title</button></nav></section>
+  <section id="journal-screen" hidden><div class="label">RECOVERED TRANSMISSIONS</div><h1>FIELD LOG</h1><div id="journal-entries"></div><nav><button id="journal-back">Back</button></nav></section>
+  <section id="confirm-screen" hidden><div class="label">ACTIVE RUN</div><h1>ABANDON RUN?</h1><p>Returning to the title discards this attempt. Your session events will remain available for CSV export.</p><nav><button id="confirm-return">Return to title</button><button id="cancel-return">Keep playing</button></nav></section>
+  <section id="briefing-screen" hidden><div class="label" id="sector"></div><h1 id="title"></h1><p id="message"></p><nav><button id="begin-mission">Deploy</button></nav></section>
+  <section id="result-screen" hidden><div class="label" id="result-sector"></div><h1 id="result-title"></h1><p id="result-message"></p><dl id="results" hidden>
+  <div><dt>Time played</dt><dd id="result-time"></dd></div>
+  <div><dt>Accuracy</dt><dd id="result-accuracy"></dd></div>
+  <div><dt>Bots disabled</dt><dd id="result-bots"></dd></div>
+  <div><dt>Retries</dt><dd id="result-retries"></dd></div>
+</dl><div id="campaign-summary" hidden></div><nav><button id="result-action"></button><button id="result-export" hidden>Export session CSV</button></nav></section>
+</section></div>
+</div>
+<div id="hud" hidden><span id="health"></span><span id="ammo"></span><span id="bots"></span><span id="objective"></span><span id="clock"></span></div>
+<footer><span id="play-controls" hidden>WASD or ↑ ↓ move · Mouse or ← → aim · Click or Space fire · R reload · E use · J field log · P pause</span><button id="export" disabled>Export session CSV</button></footer>
+</main>
+<script src="src/bunker-art.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/bunker-systems.js"></script>
+<script src="src/missions/breach-mission.js"></script>
+<script src="src/missions/blackout-mission.js"></script>
+<script src="src/game.js"></script>
+</html>

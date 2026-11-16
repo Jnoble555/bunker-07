@@ -1,6 +1,6 @@
 # Tactical PvE: Operation Iron Relay
 
-Runnable feature branch: `feature/tactical-pve-expansion`, based on completed inventory commit `a6cd31c`. This adds a standalone native tactical operation; the original Breach, Control Room and Blackout campaign remains available. Browser source and hosting are unchanged.
+Runnable feature branch: `feature/tactical-pve-expansion`, based on completed inventory commit `a6cd31c`. This adds a standalone native tactical operation; the original Breach, Control Room and Blackout campaign remains available. Classic browser source is unchanged. The merge with newer GitHub main preserves its Godot Pages hosting and separate Deep Signal operation; see [merge verification](tactical-main-merge.md).
 
 ## Play
 

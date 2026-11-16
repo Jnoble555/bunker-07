@@ -1,0 +1,48 @@
+{
+  "engine": "4.6.3.stable.official.7d41c59c4",
+  "platform": "Linux",
+  "renderer": "GL Compatibility / Mesa llvmpipe",
+  "blender": "4.3.2",
+  "suites": [
+    {
+      "suite": "milestone",
+      "passed": 46,
+      "failed": 0
+    },
+    {
+      "suite": "campaign",
+      "passed": 51,
+      "failed": 0
+    },
+    {
+      "suite": "tactical_movement_headless",
+      "passed": 17,
+      "failed": 0
+    },
+    {
+      "suite": "inventory",
+      "passed": 16,
+      "failed": 0
+    },
+    {
+      "suite": "tactical_enemy",
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "suite": "tactical_operation_headless",
+      "passed": 28,
+      "failed": 0
+    }
+  ],
+  "graphical_operation": {
+    "passed": 26,
+    "failed": 0,
+    "note": "Before the two additional headless enemy navigation assertions"
+  },
+  "graphical_final_composition_captures": 7,
+  "human_playthrough": false,
+  "play_duration_measured": false,
+  "save_resume_implemented": false,
+  "audible_mix_verified": false
+}

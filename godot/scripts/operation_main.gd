@@ -44,6 +44,7 @@ func show_title() -> void:
 	pending_actions.clear()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_show_menu("title","BUNKER 07 / IRON RELAY","TACTICAL OPERATION\n\nRestore service access, recover the elevated archive and extract. Armed SMG and rifle patrols investigate, search and use cover. The optional armory contains a shotgun.\n\nOriginal three-mission campaign remains available below.")
+	deep_signal_button.hide()
 	campaign_button.text = "Start Tactical Operation"
 	operation_button.text = "Original Campaign"
 

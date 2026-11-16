@@ -1,8 +1,10 @@
 # Bunker 07
 
+**[Play the updated 3D game](https://jnoble555.github.io/bunker-07/)** — choose **Tactical Operation / Sector 12** for Iron Relay or **Deep Signal / Tactical Operation**. The [original JavaScript edition](https://jnoble555.github.io/bunker-07/classic.html) remains available. Pages now builds the Godot project automatically; see [web release details](docs/godot/web-release.md).
+
 A **three-mission Godot campaign preview** is available in [`godot/`](godot/README.md), including reactive security, tactical devices, optional objectives and campaign consequences. The browser version below remains the behavioral reference. See [native parity and limits](docs/godot/parity.md) and [release verification](docs/godot/campaign-release.md).
 
-The native version also includes **Operation Iron Relay**, a separate tactical PvE operation with armed patrols, alternate routes, an elevated archive and a collectible shotgun. See [launch instructions, screenshots and verification](docs/godot/tactical-pve-expansion.md). This operation runs in Godot; the browser link below plays the existing browser campaign.
+The native version also includes **Operation Iron Relay**, a separate tactical PvE operation with armed patrols, alternate routes, an elevated archive and a collectible shotgun. See [launch instructions, screenshots and verification](docs/godot/tactical-pve-expansion.md). This operation runs in Godot and in the GitHub Pages Godot export. The original JavaScript campaign is preserved at `classic.html`.
 
 ### [▶ Play Bunker 07 in your browser](https://jnoble555.github.io/bunker-07/)
 
@@ -76,3 +78,7 @@ The archive near the core holds optional intel: taking it triggers security unle
 Extracting after a quiet panel shutdown disables Blackout's stationary ranged turret. An alarm instead adds an armored pursuer. Recovered intel supplies a later clue. These consequences commit only on successful extraction; failed attempts reset devices and provisional rewards. Start Campaign clears prior campaign decisions while preserving the current session CSV.
 
 New impact sparks, enemy stagger, damage-direction cues and positional synthesized audio reinforce combat. All visual/audio assets are original. Implementation details, limits and verification are in [the expansion report](docs/next-level-release.md), [systems documentation](docs/encounter-systems.md), and [art/audio provenance](docs/feedback-assets.md). `npm test` runs both the existing campaign checks and the independently authored encounter suite.
+
+## Native tactical PvE playtest
+
+The Godot title menu now offers **Deep Signal / Tactical Operation**, separate from the original campaign. It adds armed SMG/rifle patrols, alternate approaches, elevated operations, optional supplies and a collectible shotgun. Open `godot/project.godot` and press F5. See [launch, validation and unfinished stretch work](docs/godot/tactical-pve-expansion.md).

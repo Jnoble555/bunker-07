@@ -88,3 +88,7 @@ See [weapon inventory rules, assets and verification](../docs/godot/weapon-inven
 From the initial title choose **Tactical Operation / Sector 12**, then **Start Tactical Operation** and **Deploy**. Restore Maintenance access, recover the raised Operations archive, and use the eastern extraction lift. The western armory has an optional shotgun. The original campaign remains available through its own title entry.
 
 See [operation launch, final screenshots, actual test results and limits](../docs/godot/tactical-pve-expansion.md). All enemies, objectives, pickups and inventory reset on retry. This is session-only play; checkpoint saves and true sight alignment remain deferred stretch work. RMB provides aiming zoom.
+
+## Browser hosting and Deep Signal
+
+GitHub Pages builds the Godot game automatically. The original browser edition is available at `classic.html`. The title also retains **Deep Signal / Tactical Operation**, independently authored on GitHub main. Its geometry and actors remain separate from Iron Relay. See [web hosting](../docs/godot/web-release.md) and [Deep Signal](../docs/godot/deep-signal.md). Both operations use the current shared shotgun definition and asset.
