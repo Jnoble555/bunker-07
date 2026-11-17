@@ -35,7 +35,9 @@ Desktop uses Forward+ / D3D12, SSAO and 2× MSAA on world and weapon viewports. 
 
 The existing rooms are generated at runtime. This pass does not claim lightmap baking or global illumination; an editor-authored/bakeable environment is a later step. Renderer capability references: [Godot renderer comparison](https://docs.godotengine.org/en/stable/tutorials/rendering/renderers.html), [PBR material documentation](https://docs.godotengine.org/en/stable/tutorials/3d/standard_material_3d.html).
 
-The benchmark HUD moves health/ammo to the lower edge and keeps objective/E guidance above. Existing alerts and gameplay remain connected to the campaign controller. Original weapon meshes/animations and primitive enemy bodies remain visible; the benchmark does not claim a finished AAA character or weapon presentation.
+The benchmark HUD moves health/ammo to the lower edge and keeps objective/E guidance above. Existing alerts and gameplay remain connected to the campaign controller. Deep Signal guards now use an original procedural security-operator mesh: layered armor, helmet/visor, pouches, knee protection, radio pack and service rifle. Vertex colors batch each animated body section into one surface; simple limb gait, firing recoil, reload pose and alert lamp continue to follow the existing actor state. The model is a stylized low-detail first pass, not a rigged production character.
+
+No external character or weapon asset was used. The runtime mesh and muted industrial material palette are generated in `scripts/deep_signal_enemy_visual.gd`; gameplay collision and AI remain in `scripts/deep_signal_enemy.gd`.
 
 ## Matching captures
 
@@ -47,6 +49,8 @@ All comparisons use identical 1280×720 camera positions and the final assets. S
 | Security | [before](visual-benchmark/before-forward_plus-security.png) | [after](visual-benchmark/after-forward_plus-security.png) |
 | Maintenance | [before](visual-benchmark/before-forward_plus-maintenance.png) | [after](visual-benchmark/after-forward_plus-maintenance.png) |
 | Operations | [before](visual-benchmark/before-forward_plus-operations.png) | [after](visual-benchmark/after-forward_plus-operations.png) |
+
+Guard close-up: [final model in the running Deep Signal scene](visual-benchmark/after-forward_plus-guard-detail.png). For this inspection capture the AI was frozen and the selected guard was turned toward the camera; it is a staged asset view, not a combat screenshot.
 
 Compatibility uses matching `before-gl_compatibility-*` / `after-gl_compatibility-*` captures in the same folder. `*-access-used.png` records the actual successful access-terminal interaction.
 
@@ -69,13 +73,14 @@ Each final report measures 180 wall-clock process-frame intervals after a 90-phy
 - Checks compare original vs decorated collision shapes/transforms, cover points and navigation route; retain all eight actors; verify instancing, blocked/unblocked objective interaction, actual reload/clock pause and retry rebuild/reset.
 - Existing `tactical_operation_test.gd`: **28/28** headless, including physical direct/alternate routes, elevated data/extraction, shotgun, switching, death/retry and original campaign entry.
 - Final running captures inspected for scale, panel/vent visibility, materials, lighting and HUD/E guidance. This is scripted graphical validation, not a full human combat playthrough.
+- After the guard visual iteration, the graphical benchmark passed **15/15** on Forward+ and the existing `deep_signal_enemy_test.gd` passed **16/16** headlessly. Collision, cover and navigation comparisons remain unchanged. The latest static capture sample with the new guard model reported **51.0 FPS** and **1,052 draw calls** on the same Adreno X1-85 setup; this sample is variable and indicates the character presentation still needs performance profiling before it should be considered a shipped visual default.
 
 Reproduce: `& $godotBin --headless --path .\godot --editor --import --quit`, then `& $godotBin --headless --path .\godot --script res://tests/visual_benchmark_test.gd`. For captures/performance use the test script with the renderer flags from the launch command; append `-- --benchmark-baseline` for comparison.
 
 ## Next visual milestones
 
 1. Human review of this direction during live combat, including screen readability and long-session performance. Compatibility requires further optimization before adopting this art profile as the hosted default; native Compatibility measurements do not verify a web export.
-2. Replace primitive soldiers with an original or clearly licensed rigged character and coordinated locomotion/aim/reload/hit animation.
+2. Replace this procedural guard with a rigged original or clearly licensed character and coordinated locomotion/aim/reload/hit animation.
 3. Refine first-person weapon geometry/materials, add animated hands and improve environmental lighting response while retaining the isolated weapon depth buffer.
 4. Develop hero terminals/cover and bakeable room modules, then validate indirect lighting/reflections. The current repeated architecture remains a first-pass kit.
 

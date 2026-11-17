@@ -65,10 +65,15 @@ func run() -> void:
 		["entry",Vector3(5,0,44),Vector3(22,1.5,38)],
 		["security",Vector3(20,0,42),Vector3(23,1.4,39)],
 		["maintenance",Vector3(8,0,29),Vector3(7,1.4,17)],
-		["operations",Vector3(38,1.2,13),Vector3(43,2.6,7)]
+		["operations",Vector3(38,1.2,13),Vector3(43,2.6,7)],
+		["guard-detail",Vector3(40,1.2,11),Vector3(37,2.0,9)]
 	]
 	for view in views:
 		await place(view[1],view[2])
+		if view[0] == "guard-detail":
+			for enemy in game.enemies:
+				if enemy.global_position.distance_to(Vector3(37,1.2,9)) < 0.5:
+					enemy.look_at(game.player.camera.global_position,Vector3.UP)
 		await frames(8)
 		await capture(prefix+"-"+view[0])
 	# Warm static security view, uncap vsync, then record actual wall-clock frame times.
