@@ -92,3 +92,7 @@ See [operation launch, final screenshots, actual test results and limits](../doc
 ## Browser hosting and Deep Signal
 
 GitHub Pages builds the Godot game automatically. The original browser edition is available at `classic.html`. The title also retains **Deep Signal / Tactical Operation**, independently authored on GitHub main. Its geometry and actors remain separate from Iron Relay. See [web hosting](../docs/godot/web-release.md) and [Deep Signal](../docs/godot/deep-signal.md). Both operations use the current shared shotgun definition and asset.
+
+## Deep Signal visual benchmark
+
+An opt-in desktop-first art benchmark is available in `scenes/deep_signal_visual_benchmark.tscn`. Open it and press F6 for Compatibility, or use the Forward+ launch command in [art direction, matching screenshots and measured results](../docs/godot/deep-signal-visual-benchmark.md). The normal F5 game and hosted default remain unchanged.

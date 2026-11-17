@@ -1,0 +1,133 @@
+Final completed executions for the Deep Signal visual benchmark.
+Graphical comparisons were run sequentially, with no concurrent Godot test process.
+
+=== .visual-desktop-after.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: Unknown - Qualcomm(R) Adreno(TM) X1-85 GPU
+
+PASS showcase starts actual Deep Signal
+PASS all eight mission actors retained
+PASS world collision shapes and transforms unchanged
+PASS cover and navigation path unchanged
+PASS visual layer opt-in and batched
+PASS capture after-forward_plus-entry
+PASS capture after-forward_plus-security
+PASS capture after-forward_plus-maintenance
+PASS capture after-forward_plus-operations
+BENCHMARK {"ai":"frozen for controlled comparison","baseline":false,"draw_calls":186.0,"engine":"4.7.2-stable (official)","mean_fps":97.2735835750312,"mean_ms":10.2802833333333,"p50_ms":10.441,"p95_ms":11.848,"renderer":"forward_plus","resolution":"1280x720","samples":180,"vsync":"disabled"}
+PASS world obstacle blocks terminal interaction
+PASS normal approach operates access terminal
+PASS capture after-forward_plus-access-used
+PASS pause freezes actual reload and gameplay clock
+PASS retry rebuilds visuals once and resets encounter
+VISUAL BENCHMARK CHECKS 14/14 failures=0
+
+=== .visual-desktop-before.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: Unknown - Qualcomm(R) Adreno(TM) X1-85 GPU
+
+PASS showcase starts actual Deep Signal
+PASS all eight mission actors retained
+PASS world collision shapes and transforms unchanged
+PASS cover and navigation path unchanged
+PASS visual layer opt-in and batched
+PASS capture before-forward_plus-entry
+PASS capture before-forward_plus-security
+PASS capture before-forward_plus-maintenance
+PASS capture before-forward_plus-operations
+BENCHMARK {"ai":"frozen for controlled comparison","baseline":true,"draw_calls":158.0,"engine":"4.7.2-stable (official)","mean_fps":172.898870490101,"mean_ms":5.78372777777778,"p50_ms":5.71,"p95_ms":6.789,"renderer":"forward_plus","resolution":"1280x720","samples":180,"vsync":"disabled"}
+PASS world obstacle blocks terminal interaction
+PASS normal approach operates access terminal
+PASS capture before-forward_plus-access-used
+PASS pause freezes actual reload and gameplay clock
+PASS retry rebuilds visuals once and resets encounter
+VISUAL BENCHMARK CHECKS 14/14 failures=0
+
+=== .visual-compat-after.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 4.6 (Core Profile) Mesa 26.3.0-devel (git-e3fc7749c6) - Compatibility - Using Device: Microsoft - D3D12 (Qualcomm(R) Adreno(TM) X1-85 GPU)
+
+PASS showcase starts actual Deep Signal
+PASS all eight mission actors retained
+PASS world collision shapes and transforms unchanged
+PASS cover and navigation path unchanged
+PASS visual layer opt-in and batched
+PASS capture after-gl_compatibility-entry
+PASS capture after-gl_compatibility-security
+PASS capture after-gl_compatibility-maintenance
+PASS capture after-gl_compatibility-operations
+BENCHMARK {"ai":"frozen for controlled comparison","baseline":false,"draw_calls":348.0,"engine":"4.7.2-stable (official)","mean_fps":47.7985450653977,"mean_ms":20.9211388888889,"p50_ms":20.951,"p95_ms":22.315,"renderer":"gl_compatibility","resolution":"1280x720","samples":180,"vsync":"disabled"}
+PASS world obstacle blocks terminal interaction
+PASS normal approach operates access terminal
+PASS capture after-gl_compatibility-access-used
+PASS pause freezes actual reload and gameplay clock
+PASS retry rebuilds visuals once and resets encounter
+VISUAL BENCHMARK CHECKS 14/14 failures=0
+
+=== .visual-compat-before.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 4.6 (Core Profile) Mesa 26.3.0-devel (git-e3fc7749c6) - Compatibility - Using Device: Microsoft - D3D12 (Qualcomm(R) Adreno(TM) X1-85 GPU)
+
+PASS showcase starts actual Deep Signal
+PASS all eight mission actors retained
+PASS world collision shapes and transforms unchanged
+PASS cover and navigation path unchanged
+PASS visual layer opt-in and batched
+PASS capture before-gl_compatibility-entry
+PASS capture before-gl_compatibility-security
+PASS capture before-gl_compatibility-maintenance
+PASS capture before-gl_compatibility-operations
+BENCHMARK {"ai":"frozen for controlled comparison","baseline":true,"draw_calls":545.0,"engine":"4.7.2-stable (official)","mean_fps":187.91380185116,"mean_ms":5.32158888888889,"p50_ms":5.175,"p95_ms":6.28,"renderer":"gl_compatibility","resolution":"1280x720","samples":180,"vsync":"disabled"}
+PASS world obstacle blocks terminal interaction
+PASS normal approach operates access terminal
+PASS capture before-gl_compatibility-access-used
+PASS pause freezes actual reload and gameplay clock
+PASS retry rebuilds visuals once and resets encounter
+VISUAL BENCHMARK CHECKS 14/14 failures=0
+
+=== .visual-headless.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS showcase starts actual Deep Signal
+PASS all eight mission actors retained
+PASS world collision shapes and transforms unchanged
+PASS cover and navigation path unchanged
+PASS visual layer opt-in and batched
+PASS world obstacle blocks terminal interaction
+PASS normal approach operates access terminal
+PASS pause freezes actual reload and gameplay clock
+PASS retry rebuilds visuals once and resets encounter
+VISUAL BENCHMARK CHECKS 9/9 failures=0
+
+=== .visual-existing-operation.log ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS title retains campaign and adds operation
+PASS separate operation has eight armed enemies and pistol start
+PASS data cannot skip access objective
+PASS armed enemy follows authored navigation up ramp
+PASS all authored enemy spawns connect to operation navigation
+PASS maintenance alternate route physically traversable
+PASS security terminal reachable from alternate route
+PASS access terminal advances once
+PASS repeated terminal cannot duplicate progression
+PASS relay route reaches ramp base
+PASS striped ramp physically reaches upper deck
+PASS player stands on elevated collision
+PASS archive reachable upstairs
+PASS data recovery advances extraction objective
+PASS complete objective path extracts
+PASS operation results return to title
+PASS direct security route physically traversable
+PASS optional armory physically reachable
+PASS shotgun collected with independent finite ammo
+PASS actual slot-3 input equips shotgun
+PASS shotgun close blast applies several pellets but one accuracy hit
+PASS every shotgun pellet respects solid occlusion
+PASS shotgun cannot hit beyond 18m
+PASS shotgun switch cancels reload without ammo transfer
+PASS pause freezes shotgun and operation interactions
+PASS death produces retryable failure
+PASS retry resets enemies objectives pickups and inventory
+PASS original campaign still starts Breach with old scout
+TACTICAL OPERATION 28/28 failures=0

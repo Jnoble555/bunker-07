@@ -1,0 +1,14 @@
+{
+	"ai": "frozen for controlled comparison",
+	"baseline": false,
+	"draw_calls": 348.0,
+	"engine": "4.7.2-stable (official)",
+	"mean_fps": 47.7985450653977,
+	"mean_ms": 20.9211388888889,
+	"p50_ms": 20.951,
+	"p95_ms": 22.315,
+	"renderer": "gl_compatibility",
+	"resolution": "1280x720",
+	"samples": 180,
+	"vsync": "disabled"
+}

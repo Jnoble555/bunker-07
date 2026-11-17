@@ -82,3 +82,7 @@ New impact sparks, enemy stagger, damage-direction cues and positional synthesiz
 ## Native tactical PvE playtest
 
 The Godot title menu now offers **Deep Signal / Tactical Operation**, separate from the original campaign. It adds armed SMG/rifle patrols, alternate approaches, elevated operations, optional supplies and a collectible shotgun. Open `godot/project.godot` and press F5. See [launch, validation and unfinished stretch work](docs/godot/tactical-pve-expansion.md).
+
+## Desktop visual benchmark
+
+[Deep Signal visual benchmark](docs/godot/deep-signal-visual-benchmark.md): original Blender architecture, PBR surfaces, desktop Forward+ lighting, compact HUD, matching before/after views and measured performance. It is an opt-in local scene on the visual benchmark branch; the hosted edition retains its existing presentation.
