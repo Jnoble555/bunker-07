@@ -1,0 +1,14 @@
+BUNKER 07 / DEEP SIGNAL WINDOWS DEMO
+
+Download Bunker07-DeepSignal-Windows.zip, extract the entire ZIP, and run Bunker07.exe.
+Godot is included in the executable; no editor installation is required.
+Windows x64 build. Modern Vulkan-capable graphics required; Windows ARM compatibility depends on x64 emulation and the graphics driver.
+This community demo is unsigned. Windows may show a reputation warning.
+
+WASD move; mouse look; Ctrl crouch; Shift sprint; Q/C lean; right mouse aim.
+Left mouse fire; R reload; E interact/pick up; 1/2/3 switch owned weapons.
+P or Esc pause; F5 restart. Losing window focus pauses the game.
+
+Restore access at the amber Security terminal, recover the archive upstairs in Operations, then extract at the northeast lift. The west Maintenance route bypasses Security. Collect the SMG near entry with E.
+
+This demo contains original procedural assets and the polished Deep Signal visual showcase. It is a work in progress. The release build is imported and checked automatically; the same source scene was captured and checked on Godot 4.7.2 / Adreno X1-85. The exported executable requires separate end-user playtesting. BUILD.txt identifies its source commit.
