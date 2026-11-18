@@ -68,6 +68,7 @@ func _install_inputs() -> void:
 		"strafe_left": [KEY_A], "strafe_right": [KEY_D],
 		"turn_left": [KEY_LEFT], "turn_right": [KEY_RIGHT], "fire": [KEY_SPACE],
 		"weapon_3": [KEY_3], "weapon_1": [KEY_1], "weapon_2": [KEY_2], "crouch": [KEY_CTRL], "sprint": [KEY_SHIFT], "lean_left": [KEY_Q], "lean_right": [KEY_E, KEY_C],
+		"toggle_aim": [KEY_Z], "toggle_sprint": [KEY_CAPSLOCK],
 		"reload": [KEY_R], "interact": [KEY_F], "pause": [KEY_ESCAPE, KEY_P], "retry": [KEY_F5]
 	}
 	for action in bindings:

@@ -19,10 +19,10 @@ Take the west MAINTENANCE route to avoid the direct security lane. An SMG and am
 | WASD | Move |
 | Mouse | Look |
 | Left click / Space | Fire |
-| Right mouse, held | Aim; pistol iron sights |
+| Right mouse, held / Z, toggle | Aim; pistol iron sights |
 | Ctrl, held | Crouch |
-| Shift, held | Sprint |
-| Q / E, held | Lean left / right |
+| Shift, held / Caps Lock, toggle | Sprint |
+| Q / E | Lean left / right; hold by default, toggle option in Settings |
 | F | Interact or collect supplies |
 | R | Reload |
 | 1 / 2 / 3 | Select owned pistol / SMG / shotgun |
@@ -31,6 +31,8 @@ Take the west MAINTENANCE route to avoid the direct security lane. An SMG and am
 | J | Field journal |
 
 Aim slows movement and mouse look. Cover blocks sight and shots. A green hit marker confirms a target hit; a brief amber dot indicates a surface impact. Break line of sight during a guard's attack warning, then reposition.
+
+For a trackpad, press **Z** to aim, move the trackpad to look, and press **Space** to fire. Press Z again to lower the sights. **Caps Lock** toggles sprint. Enable **Toggle Q/E lean (trackpad)** in Settings to lean with a tap. Tap the same lean key to return upright, or the opposite key to switch sides. Pause, focus loss, and retry clear the toggles. Sprint pauses while aiming and resumes when you lower the sights.
 
 ## What is included
 

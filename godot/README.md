@@ -20,9 +20,9 @@ Replace the executable path on another machine; add `--editor` to open the edito
 | WASD / Up, Down | Move |
 | Mouse / Left, Right | Full mouse look / keyboard yaw |
 | Ctrl (hold) | Crouch; standing requires headroom |
-| Shift (hold) | Sprint |
-| Q / E (hold) | Lean left / right, constrained by obstacles |
-| Right mouse (hold) | Aim with reduced FOV, look sensitivity and speed; pistol iron sights |
+| Shift (hold) / Caps Lock (toggle) | Sprint |
+| Q / E | Lean left / right; optional toggle mode in Settings, constrained by obstacles |
+| Right mouse (hold) / Z (toggle) | Aim with reduced FOV, look sensitivity and speed; pistol iron sights |
 | Click / Space | Fire |
 | R | Reload from finite reserve |
 | 1 / 2 / 3 | Owned pistol / SMG / shotgun (operation) |
@@ -32,6 +32,8 @@ Replace the executable path on another machine; add `--editor` to open the edito
 | F5 | Retry current mission |
 
 Settings at title/pause save volume, mute and sensitivity locally. First-time Breach prompts teach movement, aim, fire and reload. Pause freezes timed actions, AI, tracking and effects. Returning to title during a run requires confirmation.
+
+For a trackpad, press **Z** to aim, move the trackpad to look, and press **Space** to fire. Press Z again to lower the sights. **Caps Lock** toggles sprint. Enable **Toggle Q/E lean (trackpad)** in Settings to lean with a tap. Tap the same lean key to return upright, or the opposite key to switch sides. Pause, focus loss, and retry clear the toggles. Sprint pauses while aiming and resumes when you lower the sights.
 
 ## Campaign
 

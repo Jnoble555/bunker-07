@@ -256,7 +256,16 @@ func run() -> void:
 	game.session.preferences.volume = 1.0
 	game.session.load_preferences()
 	check("native preferences persist and reload", is_equal_approx(game.session.preferences.volume, 0.25) and game.session.preferences.muted and is_equal_approx(game.session.preferences.sensitivity, 0.005))
+	check("older preferences default to hold leaning", not game.session.preferences.toggle_lean)
+	game.open_settings()
+	game.toggle_lean_check.set_pressed_no_signal(true)
+	game._save_settings()
+	game.session.preferences.toggle_lean = false
+	game.session.load_preferences()
+	check("trackpad lean preference persists through settings",game.session.preferences.toggle_lean)
+	game.close_settings()
 	game._reset_settings()
+	check("reset restores hold leaning",not game.session.preferences.toggle_lean and not game.toggle_lean_check.button_pressed)
 	check("settings reset restores native defaults", is_equal_approx(game.session.preferences.volume, 0.65) and not game.session.preferences.muted and is_equal_approx(game.session.preferences.sensitivity, 0.003))
 	game.register_event("review_detail", "a,\"b\"\nc")
 	var csv: String = game.session.csv_text(game.events)

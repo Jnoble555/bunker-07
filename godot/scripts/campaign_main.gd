@@ -43,7 +43,7 @@ var tutorial_index: int = 0
 var tutorial_active: bool = false
 var tutorial_text: Label
 var impact_feedback := 0.0
-var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift sprint / Q/E lean / RMB aim / F pickups / 1,2,3 weapons","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
+var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift or Caps Lock sprint / Q/E lean / Z aim / Space fire / F pickups / 1,2,3 weapons","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
 var campaign_button: Button
 var continue_button: Button
 var settings_button: Button
@@ -52,6 +52,7 @@ var controls_button: Button
 var export_button: Button
 var back_button: Button
 var confirm_button: Button
+var toggle_lean_check: CheckBox
 var settings_box: VBoxContainer
 var volume_slider: HSlider
 var sensitivity_slider: HSlider
@@ -700,6 +701,7 @@ func open_settings() -> void:
 	volume_slider.set_value_no_signal(session.preferences.volume)
 	sensitivity_slider.set_value_no_signal(session.preferences.sensitivity)
 	mute_check.set_pressed_no_signal(session.preferences.muted)
+	toggle_lean_check.set_pressed_no_signal(session.preferences.get("toggle_lean",false))
 
 func close_settings() -> void:
 	if return_state=="title": show_title()
@@ -717,12 +719,13 @@ func _abandon() -> void:
 	show_title()
 
 func _show_controls() -> void:
-	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Q/E: lean / RMB: aim / 1,2,3: weapons\nClick / Space: fire · R: reload · F: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
+	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Caps Lock: toggle sprint / Q/E: lean\nRMB: hold aim / Z: toggle aim / 1,2,3: weapons\nClick / Space: fire · R: reload · F: interact\nJ: field log · P / Esc: pause · F5: retry\n\nTrackpad: Z to aim, move the trackpad to look, Space to fire.\nEnable toggle Q/E lean in Settings. Pause clears all toggles.\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
 
 func _save_settings() -> void:
 	session.preferences.volume = volume_slider.value
 	session.preferences.sensitivity = sensitivity_slider.value
 	session.preferences.muted = mute_check.button_pressed
+	session.preferences.toggle_lean = toggle_lean_check.button_pressed
 	session.save_preferences()
 	if audio: audio.refresh_volume()
 
@@ -732,6 +735,7 @@ func _reset_settings() -> void:
 	volume_slider.set_value_no_signal(session.preferences.volume)
 	sensitivity_slider.set_value_no_signal(session.preferences.sensitivity)
 	mute_check.set_pressed_no_signal(false)
+	toggle_lean_check.set_pressed_no_signal(false)
 	if audio: audio.refresh_volume()
 
 func _build_campaign_ui() -> void:
@@ -772,10 +776,14 @@ func _build_campaign_ui() -> void:
 	mute_check = CheckBox.new()
 	mute_check.text = "Mute"
 	settings_box.add_child(mute_check)
+	toggle_lean_check = CheckBox.new()
+	toggle_lean_check.text = "Toggle Q/E lean (trackpad)"
+	settings_box.add_child(toggle_lean_check)
 	_button(settings_box,"Reset to defaults",_reset_settings)
 	volume_slider.value_changed.connect(func(_value): _save_settings())
 	sensitivity_slider.value_changed.connect(func(_value): _save_settings())
 	mute_check.toggled.connect(func(_value): _save_settings())
+	toggle_lean_check.toggled.connect(func(_value): _save_settings())
 	title_button.pressed.disconnect(show_title)
 	title_button.pressed.connect(_confirm_return)
 	tutorial_text = Label.new()
