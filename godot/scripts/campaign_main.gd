@@ -183,7 +183,8 @@ func show_briefing() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var definition: Dictionary = missions[mission_index]
-	_show_menu("briefing",definition.title,"%s\n\n%s" % ["STANDALONE TACTICAL OPERATION" if operation_mode else "MISSION %d OF %d" % [mission_index+1,missions.size()],definition.briefing])
+	var briefing: String = definition.briefing if operation_mode else "MISSION %d OF %d\n\n%s" % [mission_index+1,missions.size(),definition.briefing]
+	_show_menu("briefing",definition.title,briefing)
 
 func deploy_current() -> void:
 	start_run()
