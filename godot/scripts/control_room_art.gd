@@ -90,6 +90,7 @@ func _decorate_control_room(world: Node3D) -> void:
 		light.omni_range = 5.5
 
 func _decorate_operation(world: Node3D) -> void:
+	_decorate_cover(world)
 	for bounds: AABB in world.solids:
 		if bounds.size.y < 4.0: continue # Only walls; leave cover and rails untouched.
 		var along_x := bounds.size.x > bounds.size.z
@@ -118,6 +119,43 @@ func _decorate_operation(world: Node3D) -> void:
 			var toned := m.duplicate() as StandardMaterial3D
 			toned.emission_energy_multiplier = 0.25
 			node.material_override = toned
+
+func _decorate_cover(world: Node3D) -> void:
+	# Thin original equipment cladding follows the authored collision envelope.
+	# Batch repeated hardware by material so detail does not add one draw per bolt.
+	var parts: Dictionary = {"dark": [], "trim": [], "hazard": []}
+	for body in world.get_children():
+		if not body is StaticBody3D or not str(body.name).begins_with("SolidCover"): continue
+		var at: Vector3 = body.position
+		for side: float in [-1.0, 1.0]:
+			var z: float = side * 0.606
+			parts.dark.append([at + Vector3(0,0,z), Vector3(2.12,0.88,0.006)])
+			for x in [-0.95, 0.95]:
+				parts.trim.append([at + Vector3(x,0,z), Vector3(0.055,1.12,0.008)])
+				for y in [-0.47,0.47]:
+					parts.hazard.append([at + Vector3(x,y,side*0.6), Vector3(0.08,0.045,0.008)])
+			for y in [-0.45, 0.45]:
+				parts.trim.append([at + Vector3(0,y,z), Vector3(1.85,0.035,0.008)])
+			parts.trim.append([at + Vector3(0,0.14,side*0.6), Vector3(0.46,0.07,0.008)])
+			parts.hazard.append([at + Vector3(-0.62,0.30,side*0.6), Vector3(0.24,0.04,0.008)])
+		for x in [-0.96, 0.96]:
+			parts.dark.append([at + Vector3(x,0.621,0), Vector3(0.07,0.008,1.15)])
+	for id: String in parts:
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3.ONE
+		mesh.material = _materials[id]
+		var batch := MultiMesh.new()
+		batch.transform_format = MultiMesh.TRANSFORM_3D
+		batch.mesh = mesh
+		batch.instance_count = parts[id].size()
+		for index in batch.instance_count:
+			var part: Array = parts[id][index]
+			batch.set_instance_transform(index, Transform3D(Basis.from_scale(part[1]), part[0]))
+		var instance := MultiMeshInstance3D.new()
+		instance.name = "EquipmentCover_" + id
+		instance.multimesh = batch
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(instance)
 
 func _replace_surfaces(node: Node) -> void:
 	if node is MeshInstance3D:

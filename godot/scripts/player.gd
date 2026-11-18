@@ -2,8 +2,10 @@ extends CharacterBody3D
 ## Grounded tactical movement; yaw owns horizontal travel, camera owns pitch/lean.
 
 const SPEED: float = 5.3
+const WEAPON_IDLE_POSITION := Vector3(0.20, -0.21, -0.72)
 var controller: Node
 var camera: Camera3D
+var weapon_camera: Camera3D
 var weapon: Node3D
 var muzzle: MeshInstance3D
 var muzzle_light: OmniLight3D
@@ -40,8 +42,8 @@ func setup(owner_controller: Node) -> void:
 	add_child(camera)
 	weapon = preload("res://scenes/security_sidearm.tscn").instantiate()
 	_make_weapon_view(weapon)
-	weapon.scale = Vector3.ONE * 0.65
-	weapon.position = Vector3(0.14, -0.07, -0.65)
+	weapon.scale = Vector3.ONE * 0.58
+	weapon.position = WEAPON_IDLE_POSITION
 	muzzle = _add_weapon_box(Vector3(0.10, 0.10, 0.06), Vector3(0, 0.055, -0.20), Color("ffce72"))
 	var glow := StandardMaterial3D.new()
 	glow.albedo_color = Color("ffe0a0")
@@ -93,8 +95,9 @@ func reset_player() -> void:
 		camera.position = Vector3(0, 1.4, 0)
 		camera.rotation = Vector3.ZERO
 		camera.fov = rad_to_deg(2 * atan(0.68))
+		if weapon_camera: weapon_camera.fov = camera.fov
 	if weapon:
-		weapon.position = Vector3(0.14, -0.07, -0.65)
+		weapon.position = WEAPON_IDLE_POSITION
 		muzzle.visible = false
 		muzzle_light.light_energy = 0
 		weapon.pose(0, 0)
@@ -134,13 +137,15 @@ func _physics_process(delta: float) -> void:
 	camera.position = eye + Vector3(lean, 0, 0)
 	camera.rotation = Vector3(pitch, 0, -lean * 0.22)
 	camera.fov = lerpf(camera.fov, 58.0 if aiming else rad_to_deg(2 * atan(0.68)), minf(1, delta * 14))
+	# The isolated viewmodel has its own camera and must track the gameplay zoom.
+	if weapon_camera: weapon_camera.fov = camera.fov
 	# Raise the weapon during its defined reload so the magazine stays visible.
 	var reload_offset: float = 0.0
 	if controller.reload_remaining > 0:
 		var progress: float = 1.0 - controller.reload_remaining / controller.get_weapon_def().reload
 		reload_offset = (progress / 0.25 if progress < 0.25 else (1.0 - progress) / 0.75) * -0.07
 	var sway: float = sin(controller.elapsed * 10) * 0.012 if input.length() > 0 else 0.0
-	weapon.position = Vector3(0.14 + sway, -0.07 - reload_offset, -0.65 + controller.flash * 0.8)
+	weapon.position = Vector3(WEAPON_IDLE_POSITION.x + sway, WEAPON_IDLE_POSITION.y - reload_offset, WEAPON_IDLE_POSITION.z + controller.flash * 0.8)
 	weapon.pose(controller.flash, controller.reload_remaining, controller.get_weapon_def().reload, controller.get_weapon_def().recoil)
 	muzzle.position = controller.get_weapon_def().muzzle
 	muzzle_light.position = muzzle.position
@@ -158,6 +163,7 @@ func _make_weapon_view(model: Node3D) -> void:
 	add_child(viewport)
 	var view_camera := Camera3D.new()
 	view_camera.fov = camera.fov
+	weapon_camera = view_camera
 	view_camera.keep_aspect = camera.keep_aspect
 	view_camera.near = 0.02
 	viewport.add_child(view_camera)

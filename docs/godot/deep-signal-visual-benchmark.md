@@ -1,8 +1,12 @@
 # Deep Signal desktop visual benchmark
 
-Branch: `feature/deep-signal-visual-benchmark`, based on GitHub main `c9d00c6`. The user's preferred Deep Signal mission is the showcase. This is the first environment/material/lighting benchmark toward a more modern presentation; character and first-person animation production remain separate milestones.
+Branch: `feature/deep-signal-modern-demo`, based on GitHub main `6bac7ec`. The user's preferred Deep Signal mission is the showcase. This is a focused security-room and first-person presentation pass on top of the environment/material/lighting benchmark; character and first-person animation production remain separate milestones.
 
 ## View and play
+
+For the local presentation, double-click **Play Deep Signal.cmd** in the repository root. It opens the desktop Forward+ showcase directly using the installed Godot executable. The launcher path was inspected; the scene was executed through the graphical benchmark below. Rehearse on the presentation display before the demo. P/Esc pauses, F5 retries, and E operates the Security terminal after approaching it. This is the native Godot demo; the GitHub Pages link still opens the browser reference.
+
+The final cover pass adds original recessed-looking face plates, metal frame strips, latch markings and amber identifiers to existing cover blocks using three instanced batches. The visual skin extends only millimeters beyond the original bodies; collision, cover points and navigation remain unchanged. Final graphical checks passed 21/21 without script errors, and matching captures were regenerated and inspected. The latest fixed Security sample measured 49.3 FPS / 20.27 ms mean / 22.04 ms p95 at 1280×720 on Adreno X1-85 (AI frozen, 180 frames); this is not a live-combat performance measurement.
 
 The benchmark is an **opt-in scene**. Ordinary project F5 and the hosted game still use the existing main scene. The benchmark starts Deep Signal immediately with its eight actors, current security director, objectives, pickups, ammunition and retry rules.
 
@@ -39,6 +43,18 @@ The benchmark HUD moves health/ammo to the lower edge and keeps objective/E guid
 
 No external character or weapon asset was used. The runtime mesh and muted industrial material palette are generated in `scripts/deep_signal_enemy_visual.gd`; gameplay collision and AI remain in `scripts/deep_signal_enemy.gd`.
 
+The next character pass adds a deterministic, seamless grayscale grain texture to the guard's merged vertex-colored armor and uniform, reuses it as a subtle roughness map, and rounds exposed armor edges. Texture is generated and cached at runtime; beveled parts stay merged into the existing animated surfaces. No external asset or extra mesh surface was added. This adds surface breakup and catches the lighting on edges; it does not replace the planned rigged character or coordinated combat animation.
+
+## Security-console and first-person polish
+
+For the Security objective, both box-only terminal visuals now use the existing original `scenes/industrial_console.tscn` asset. It keeps the previous terminal collision shape, interaction position/range, device progression and navigation data; the hidden legacy housing remains the tested physical body. Amber and cyan screens use a dark face with brighter status marks. A successful interaction changes its label to `COMPLETE` and the screen to muted green, while retry rebuilds the ready state. No external asset was added.
+
+The isolated weapon camera now follows the gameplay camera's interpolated aim FOV, preventing a mismatch when zooming. The sidearm is smaller and sits lower/right so the central sightline, objective prompt and terminal remain visible. Its ammo, damage, timing, targeting, animation state, pause and reset behavior are unchanged.
+
+New captures: [terminal approach](visual-benchmark/after-forward_plus-terminal-approach.png), [ready console](visual-benchmark/after-forward_plus-terminal-ready.png), and [completed console](visual-benchmark/after-forward_plus-access-used.png). These are staged 1280×720 screenshots with frozen AI; they show presentation and interaction feedback, not a full combat playthrough.
+
+Actual checks on Godot 4.7.2 / Adreno X1-85: the graphical Forward+ visual benchmark passed **21/21**, including matching room collision/navigation, both console visuals without added colliders, dark-screen/readout contrast, blocked and successful interaction, pause timing and retry reset. The headless visual benchmark passed **13/13**. Tactical movement passed **20 checks**; its captured-mouse-handler check was skipped because headless Godot cannot provide a captured graphical mouse. The graphical benchmark auto-resumes after its initial focus-loss pause so scripted captures and interactions can run while the window is unattended; the game's regular focus-loss pause behavior is unchanged. Godot logged that this restricted session could not write `user://` logs or shader cache; these did not prevent the checks from passing.
+
 ## Matching captures
 
 All comparisons use identical 1280×720 camera positions and the final assets. Scripted capture freezes enemy physics and visits entry, Security, Maintenance and Operations; Operations is a visual inspection viewpoint, not evidence of completing its objective sequence.
@@ -73,7 +89,8 @@ Each final report measures 180 wall-clock process-frame intervals after a 90-phy
 - Checks compare original vs decorated collision shapes/transforms, cover points and navigation route; retain all eight actors; verify instancing, blocked/unblocked objective interaction, actual reload/clock pause and retry rebuild/reset.
 - Existing `tactical_operation_test.gd`: **28/28** headless, including physical direct/alternate routes, elevated data/extraction, shotgun, switching, death/retry and original campaign entry.
 - Final running captures inspected for scale, panel/vent visibility, materials, lighting and HUD/E guidance. This is scripted graphical validation, not a full human combat playthrough.
-- After the guard visual iteration, the graphical benchmark passed **15/15** on Forward+ and the existing `deep_signal_enemy_test.gd` passed **16/16** headlessly. Collision, cover and navigation comparisons remain unchanged. The latest static capture sample with the new guard model reported **51.0 FPS** and **1,052 draw calls** on the same Adreno X1-85 setup; this sample is variable and indicates the character presentation still needs performance profiling before it should be considered a shipped visual default.
+- After the guard visual iteration, the graphical benchmark passed **15/15** on Forward+ and the existing `deep_signal_enemy_test.gd` passed **16/16** headlessly. That historical static capture reported **51.0 FPS** and **1,052 draw calls** on the Adreno X1-85.
+- The console/weapon/guard-surface polish run passed **21/21** graphically. Its 180-frame static Security sample reported **50.3 FPS** and **1,142 draws** at 1280×720 on the same GPU. Treat this as a variable, single-scene regression reference rather than a combat guarantee; no sustained combat or browser frame-rate test was run.
 
 Reproduce: `& $godotBin --headless --path .\godot --editor --import --quit`, then `& $godotBin --headless --path .\godot --script res://tests/visual_benchmark_test.gd`. For captures/performance use the test script with the renderer flags from the launch command; append `-- --benchmark-baseline` for comparison.
 
