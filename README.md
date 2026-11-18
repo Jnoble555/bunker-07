@@ -6,6 +6,8 @@ A first-person tactical game built with **Godot 4.7.2**, developed with OpenAI C
 
 ## Start the demo
 
+**[Download the polished Windows desktop demo](https://github.com/Jnoble555/bunker-07/releases/latest/download/Bunker07-DeepSignal-Windows.zip)** — extract the ZIP and run **Bunker07.exe**. No Godot installation needed. This build starts the desktop Deep Signal visual showcase directly. Windows x64; modern Vulkan-capable graphics required. See [release details](https://github.com/Jnoble555/bunker-07/releases/latest). The executable is unsigned.
+
 1. Open the game in a desktop browser.
 2. Choose **Deep Signal / Tactical Operation**, read the briefing, and deploy.
 3. Restore SECURITY access at the amber terminal, recover the OPERATIONS archive up the striped ramp, and extract at the northeast lift.
