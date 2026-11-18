@@ -4,6 +4,20 @@ var failed := 0
 func _initialize() -> void: call_deferred("run")
 func frames(n: int) -> void:
 	for i in n: await physics_frame
+func tap_key(code: Key, echo: bool = false) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.keycode = code
+	event.pressed = true
+	event.echo = echo
+	Input.parse_input_event(event)
+	await frames(2)
+	event = event.duplicate()
+	event.pressed = false
+	event.echo = false
+	Input.parse_input_event(event)
+	await frames(2)
+
 func check(label: String, passed: bool) -> void:
 	print(("PASS " if passed else "FAIL ") + label)
 	if not passed: failed += 1
@@ -115,6 +129,62 @@ func run() -> void:
 	check("solid geometry occludes vertical shot",target.hp == 2)
 	check("blocked shot shows surface impact without a confirmed hit",game.impact_feedback > 0 and game.hit_feedback == 0)
 	check("interaction and enemy sight respect elevated obstacle",not game.interaction_los(p.camera.global_position,target.global_position + Vector3(0,1.4,0)) and not target._can_see(p))
+	p.global_position = Vector3(100,0,105)
+	p.clear_held_inputs()
+	await tap_key(KEY_Z)
+	await frames(10)
+	check("Z keeps sights aimed after key release",p.aiming and p.aim_toggled and p.aim_blend > .99)
+	await tap_key(KEY_Z,true)
+	check("key repeat does not flip toggle aim",p.aim_toggled)
+	var rounds_before: int = game.ammo
+	game.cooldown = 0
+	await tap_key(KEY_SPACE)
+	check("Space fires while Z sights stay aimed",game.ammo == rounds_before-1 and p.aiming)
+	await tap_key(KEY_Z)
+	check("second Z lowers toggle sights",not p.aiming and not p.aim_toggled)
+	Input.action_press("aim_weapon")
+	await frames(3)
+	rounds_before = game.ammo
+	game.cooldown = 0
+	await tap_key(KEY_SPACE)
+	check("Space fires while right-mouse aim is held",game.ammo == rounds_before-1 and p.aiming)
+	p.clear_held_inputs()
+	await tap_key(KEY_CAPSLOCK)
+	Input.action_press("move_forward")
+	await frames(2)
+	check("Caps Lock keeps sprint on after key release",p.sprint_toggled and Vector2(p.velocity.x,p.velocity.z).length() > walk_speed)
+	await tap_key(KEY_Z)
+	check("aiming suspends toggled sprint",p.sprint_toggled and p.aiming and Vector2(p.velocity.x,p.velocity.z).length() < walk_speed)
+	await tap_key(KEY_Z)
+	check("lowering sights resumes toggled sprint",p.sprint_toggled and Vector2(p.velocity.x,p.velocity.z).length() > walk_speed)
+	await tap_key(KEY_CAPSLOCK)
+	check("second Caps Lock ends sprint",not p.sprint_toggled and Vector2(p.velocity.x,p.velocity.z).length() <= walk_speed + .01)
+	p.clear_held_inputs()
+	game.session.preferences.toggle_lean = true
+	await tap_key(KEY_Q)
+	check("toggle Q stays left after release",p.lean_toggled == -1 and p.lean < -.25)
+	await tap_key(KEY_E)
+	check("opposite lean key switches directly right",p.lean_toggled == 1 and p.lean > .25)
+	await tap_key(KEY_E)
+	check("same lean key returns upright",p.lean_toggled == 0 and is_zero_approx(p.lean))
+	await tap_key(KEY_Z)
+	await tap_key(KEY_CAPSLOCK)
+	await tap_key(KEY_Q)
+	p._notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
+	check("focus loss clears all trackpad toggles",not p.aim_toggled and not p.sprint_toggled and p.lean_toggled == 0)
+	await tap_key(KEY_Z)
+	await tap_key(KEY_CAPSLOCK)
+	await tap_key(KEY_E)
+	game.set_paused(true)
+	check("pause clears all trackpad toggles",not p.aim_toggled and not p.sprint_toggled and p.lean_toggled == 0)
+	game.set_paused(false)
+	await tap_key(KEY_Z)
+	await tap_key(KEY_CAPSLOCK)
+	await tap_key(KEY_Q)
+	game.retry_run()
+	await frames(3)
+	check("retry clears toggles and retains lean preference",not p.aim_toggled and not p.sprint_toggled and p.lean_toggled == 0 and game.session.preferences.toggle_lean)
+	game.session.preferences.toggle_lean = false
 	Input.action_press("aim_weapon")
 	Input.action_press("sprint")
 	Input.action_press("lean_left")

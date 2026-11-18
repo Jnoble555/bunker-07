@@ -15,6 +15,9 @@ var aiming := false
 var pitch := 0.0
 var lean := 0.0
 var aim_blend := 0.0
+var aim_toggled := false
+var sprint_toggled := false
+var lean_toggled := 0
 
 
 func setup(owner_controller: Node) -> void:
@@ -107,9 +110,24 @@ func reset_player() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not controller or not controller.active or get_tree().paused:
 		return
+	if event is InputEventKey and event.echo: return
+	if event.is_action_pressed("toggle_aim"):
+		aim_toggled = not aim_toggled
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("toggle_sprint"):
+		sprint_toggled = not sprint_toggled
+		get_viewport().set_input_as_handled()
+	elif _toggle_lean_enabled() and (event.is_action_pressed("lean_left") or event.is_action_pressed("lean_right")):
+		var side := -1 if event.is_action_pressed("lean_left") else 1
+		lean_toggled = 0 if lean_toggled == side else side
+		get_viewport().set_input_as_handled()
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		apply_look(event.relative)
 		if event.relative != Vector2.ZERO: controller.progress_tutorial("aim")
+
+func _toggle_lean_enabled() -> bool:
+	var session: Variant = controller.get("session")
+	return session != null and bool(session.preferences.get("toggle_lean", false))
 
 func _physics_process(delta: float) -> void:
 	if not controller or not controller.active:
@@ -125,8 +143,8 @@ func _physics_process(delta: float) -> void:
 		crouched = false
 	body_shape.shape.height = 1.05 if crouched else 1.8
 	body_shape.position.y = body_shape.shape.height * 0.5
-	aiming = Input.is_action_pressed("aim_weapon")
-	var speed := SPEED * (0.45 if crouched else (1.5 if Input.is_action_pressed("sprint") and not aiming else 1.0))
+	aiming = aim_toggled or Input.is_action_pressed("aim_weapon")
+	var speed := SPEED * (0.45 if crouched else (1.5 if (sprint_toggled or Input.is_action_pressed("sprint")) and not aiming else 1.0))
 	if aiming: speed *= 0.65
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
@@ -134,7 +152,8 @@ func _physics_process(delta: float) -> void:
 	_step_up(Vector3(velocity.x, 0, velocity.z) * delta)
 	move_and_slide()
 	var eye := Vector3(0, 0.85 if crouched else 1.4, 0)
-	var desired := Input.get_axis("lean_left", "lean_right") * 0.32
+	var lean_input := float(lean_toggled) if _toggle_lean_enabled() else Input.get_axis("lean_left", "lean_right")
+	var desired := lean_input * 0.32
 	lean = safe_lean(eye, desired)
 	camera.position = eye + Vector3(lean, 0, 0)
 	camera.rotation = Vector3(pitch, 0, -lean * 0.22)
@@ -235,6 +254,9 @@ func _step_up(motion: Vector3) -> void:
 		global_position.y += 0.26 + landing.get_travel().y
 
 func clear_held_inputs() -> void:
+	aim_toggled = false
+	sprint_toggled = false
+	lean_toggled = 0
 	for action in ["move_forward", "move_back", "strafe_left", "strafe_right", "turn_left", "turn_right", "crouch", "sprint", "lean_left", "lean_right", "aim_weapon", "fire"]:
 		Input.action_release(action)
 	aiming = false

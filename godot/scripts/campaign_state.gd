@@ -1,6 +1,6 @@
 extends RefCounted
 ## Native preferences persist; campaign consequences and analytics remain session-scoped.
-const DEFAULTS := {"volume":0.65,"muted":false,"sensitivity":0.003}
+const DEFAULTS := {"volume":0.65,"muted":false,"sensitivity":0.003,"toggle_lean":false}
 var preferences: Dictionary = DEFAULTS.duplicate()
 var tutorial_seen: bool = false
 var decisions: Dictionary = {}
@@ -52,6 +52,8 @@ func load_preferences() -> void:
 			preferences[key] = clampf(float(value),0.0 if key=="volume" else 0.0005,1.0 if key=="volume" else 0.01)
 	var mute: Variant = config.get_value("preferences","muted",false)
 	preferences.muted = mute if mute is bool else false
+	var toggle_lean: Variant = config.get_value("preferences","toggle_lean",false)
+	preferences.toggle_lean = toggle_lean if toggle_lean is bool else false
 	tutorial_seen = bool(config.get_value("onboarding","seen",false))
 
 func save_preferences() -> Error:
