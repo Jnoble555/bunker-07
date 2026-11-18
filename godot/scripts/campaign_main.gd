@@ -42,7 +42,8 @@ var damage_direction: String = ""
 var tutorial_index: int = 0
 var tutorial_active: bool = false
 var tutorial_text: Label
-var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift sprint / Q,C lean / RMB aim / E pickups / 1,2,3 weapons","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
+var impact_feedback := 0.0
+var tutorial_steps: Array[String] = ["WASD move / Ctrl crouch / Shift sprint / Q/E lean / RMB aim / F pickups / 1,2,3 weapons","Aim with mouse / Left, Right","Fire with Click / Space","Reload with R"]
 var campaign_button: Button
 var continue_button: Button
 var settings_button: Button
@@ -208,6 +209,7 @@ func start_run() -> void:
 	reload_remaining = 0
 	flash = 0
 	hit_feedback = 0
+	impact_feedback = 0
 	hurt_feedback = 0
 	elapsed = 0
 	shots = 0
@@ -272,6 +274,7 @@ func _physics_process(delta: float) -> void:
 	cooldown = maxf(0,cooldown-delta)
 	flash = maxf(0,flash-delta)
 	hit_feedback = maxf(0,hit_feedback-delta)
+	impact_feedback = maxf(0,impact_feedback-delta)
 	hurt_feedback = maxf(0,hurt_feedback-delta)
 	message_left = maxf(0,message_left-delta)
 	if reload_remaining>0:
@@ -326,6 +329,7 @@ func shoot() -> void:
 	weapon_ammo[weapon_id].magazine = ammo
 	flash = .10
 	hit_feedback = 0
+	impact_feedback = 0
 	progress_tutorial("fire")
 	play_sound(get_weapon_def().sound,player.global_position)
 	var origin: Vector3 = player.camera.global_position
@@ -343,6 +347,7 @@ func shoot() -> void:
 		var actor: Node3D = object.get_parent() if object is Area3D and object.has_method("receive_hit") else object
 		var center: Vector3 = object.get_meta("target_center",actor.global_position)
 		if float(hit.distance) <= 0.001 and (center-origin).dot(hit.direction) <= 0: continue
+		impact_feedback = .16
 		var successful := false
 		if object.has_meta("device_id"):
 			successful = systems.shootable_hit(str(object.get_meta("device_id")))
@@ -712,7 +717,7 @@ func _abandon() -> void:
 	show_title()
 
 func _show_controls() -> void:
-	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Q,C: lean / RMB: aim / 1,2,3: weapons\nClick / Space: fire · R: reload · E: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
+	_show_menu("controls","CONTROLS","WASD: move / Mouse: full look\nCtrl: crouch / Shift: sprint / Q/E: lean / RMB: aim / 1,2,3: weapons\nClick / Space: fire · R: reload · F: interact\nJ: field log · P / Esc: pause · F5: retry\n\nBreak sight during enemy windup. Devices show interaction prompts.\nCSV exports to the native user-data folder.")
 
 func _save_settings() -> void:
 	session.preferences.volume = volume_slider.value
@@ -822,9 +827,9 @@ func _update_hud() -> void:
 		"breach": objective = "DISABLE SECURITY SCOUT" if remaining()>0 else "REACH CONTROL SECTOR"
 		"blackout": objective = "POWER RESTORED · REACH LIFT" if power_restored else "FIND BACKUP POWER / SOUTHWEST BAY"
 		_: objective = "CORE SECURED · EXTRACT" if core_collected else "DATA CORE REQUIRED · PANEL OR GUARD ALERT"
-	if not operation_mode and mission.get("id","")!="breach" and planar_distance(player.global_position,mission.panel)<=1.7: objective += " | PANEL OFF" if panel_disabled else " | E · USE PANEL"
+	if not operation_mode and mission.get("id","")!="breach" and planar_distance(player.global_position,mission.panel)<=1.7: objective += " | PANEL OFF" if panel_disabled else " | F · USE PANEL"
 	var nearby_pickup := nearby_pickup()
-	var prompt: String = ("E / " + str(nearby_pickup.label)) if not nearby_pickup.is_empty() else (systems.prompt() if systems else "")
+	var prompt: String = ("F / " + str(nearby_pickup.label)) if not nearby_pickup.is_empty() else (systems.prompt() if systems else "")
 	if prompt!="": objective += " | "+prompt
 	status.text = objective
 	var warnings: Array[String] = []
@@ -837,7 +842,8 @@ func _update_hud() -> void:
 	if hurt_feedback>0: warnings.append(damage_direction)
 	feedback.text = " | ".join(warnings)
 	tint.color.a = hurt_feedback*1.4
-	crosshair.text = "×" if hit_feedback>0 else "+"
+	crosshair.text = "×" if hit_feedback>0 else "·" if impact_feedback>0 else "" if player.aim_blend > .95 else "+"
+	crosshair.modulate = Color("8de7ce") if hit_feedback>0 else Color("ffc064") if impact_feedback>0 else Color.WHITE
 	hud.visible = active and not get_tree().paused
 	status.visible = hud.visible
 	feedback.visible = hud.visible
@@ -936,7 +942,7 @@ func operation_objective() -> String:
 	var target: Vector3 = mission.panel if operation_stage==0 else mission.core if operation_stage==1 else mission.exit
 	text += " / %dm" % roundi(player.global_position.distance_to(target))
 	if operation_stage<2 and player.camera.global_position.distance_to(target+Vector3(0,1.35,0))<1.8 and has_los(player.camera.global_position,target+Vector3(0,1.35,0)):
-		text += " | E · " + ("RESTORE ACCESS" if operation_stage==0 else "RECOVER DATA")
+		text += " | F · " + ("RESTORE ACCESS" if operation_stage==0 else "RECOVER DATA")
 	return text
 
 func operation_interact() -> void:

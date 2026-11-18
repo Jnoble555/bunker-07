@@ -1,88 +1,87 @@
 # Bunker 07
 
-**[Play the updated 3D game](https://jnoble555.github.io/bunker-07/)** — choose **Tactical Operation / Sector 12** for Iron Relay or **Deep Signal / Tactical Operation**. The [original JavaScript edition](https://jnoble555.github.io/bunker-07/classic.html) remains available. The intended release uses a tested Godot Actions build; the hosting audit and required Pages source setting are documented in [web release details](docs/godot/web-release.md). The menu footer build ID and `build-info.json` identify the deployed source commit.
+A first-person tactical game built with **Godot 4.7.2**, developed with OpenAI Codex for a Web Analytics class.
 
-A **three-mission Godot campaign preview** is available in [`godot/`](godot/README.md), including reactive security, tactical devices, optional objectives and campaign consequences. The browser version below remains the behavioral reference. See [native parity and limits](docs/godot/parity.md) and [release verification](docs/godot/campaign-release.md).
+**[Play in your browser](https://jnoble555.github.io/bunker-07/)** · [Controls and local setup](godot/README.md) · [Build identity](https://jnoble555.github.io/bunker-07/build-info.json)
 
-The native version also includes **Operation Iron Relay**, a separate tactical PvE operation with armed patrols, alternate routes, an elevated archive and a collectible shotgun. See [launch instructions, screenshots and verification](docs/godot/tactical-pve-expansion.md). This operation runs in Godot and in the GitHub Pages Godot export. The original JavaScript campaign is preserved at `classic.html`.
+## Start the demo
 
-### [▶ Play Bunker 07 in your browser](https://jnoble555.github.io/bunker-07/)
+1. Open the game in a desktop browser.
+2. Choose **Deep Signal / Tactical Operation**, read the briefing, and deploy.
+3. Restore SECURITY access at the amber terminal, recover the OPERATIONS archive up the striped ramp, and extract at the northeast lift.
 
-**No download or installation required.** Open the game in a desktop browser and choose **Start Campaign**.
+Take the west MAINTENANCE route to avoid the direct security lane. An SMG and ammunition are available near the entrance. The southeast ARMORY holds an optional shotgun.
 
-A Wolfenstein 3D-inspired browser FPS built with OpenAI Codex for a Web Analytics class. The original map and security bots are drawn in JavaScript using Canvas 2D.
+## Controls
 
-## Play
-
-**[Launch the hosted game →](https://jnoble555.github.io/bunker-07/)**
-
-Start Campaign opens a short mission briefing before deployment. Breach introduces combat, Control Room offers the guarded direct and longer maintenance routes, and Blackout asks you to restore power and reach the extraction lift.
-
-To play offline, download or clone this repository and open `index.html` in a desktop browser. The local version requires no installation, network access, or build step.
-
-| Control | Action |
+| Input | Action |
 | --- | --- |
-| WASD or up/down arrows | Move |
-| Mouse or left/right arrows | Aim |
-| Click or Space | Fire |
+| WASD | Move |
+| Mouse | Look |
+| Left click / Space | Fire |
+| Right mouse, held | Aim; pistol iron sights |
+| Ctrl, held | Crouch |
+| Shift, held | Sprint |
+| Q / E, held | Lean left / right |
+| F | Interact or collect supplies |
 | R | Reload |
-| E | Use a nearby panel to disable/silence the alarm or restore power |
-| J | Open the field log (pauses play) |
-| P or Esc | Pause |
+| 1 / 2 / 3 | Select owned pistol / SMG / shotgun |
+| Esc / P | Pause |
+| F5 | Retry |
+| J | Field journal |
 
-The title screen includes **Controls** and **Settings**. Settings adjusts master volume, mute, and mouse sensitivity; **Reset to defaults** restores the original values. Preferences are saved in browser storage when available. Gameplay remains playable if storage or browser audio is unavailable. The pause menu provides Resume, Settings, and a confirmed Return to title action.
+Aim slows movement and mouse look. Cover blocks sight and shots. A green hit marker confirms a target hit; a brief amber dot indicates a surface impact. Break line of sight during a guard's attack warning, then reposition.
 
-First-time Breach prompts teach movement, aiming, firing, and reloading. A nearby panel or switch displays its E interaction prompt. In Control Room, break the guard's line of sight during the warning to avoid detection, or use the maintenance route to reach the alarm panel. Disabling the panel after the alarm sounds silences it but does not remove a reinforcement already deployed. Surviving bots do not block extraction.
+## What is included
 
-## Gameplay analytics
+- **Deep Signal** — a standalone operation with alternate approaches, supplies, elevated objectives, and eight guards. The initial SECURITY pair can coordinate a search after a delayed radio report.
+- **Original campaign** — Breach, Control Room, and Blackout, with security devices, optional objectives, and consequences between missions.
+- **Iron Relay** — a separate tactical operation with patrols, an elevated archive, and a collectible shotgun.
+- **Session analytics** — export CSV events to examine accuracy, active play time, route choices, objectives, and retries.
 
-Use **Export session CSV** below the game or on a results screen to download events for all attempts since the page loaded. The export retains the existing columns and appends `detail` and `mission_id`; group rows by `run` and mission ID to distinguish retries, routes, and outcomes. Route entry, alarm trigger/disable, reinforcement spawn, core/power objectives, combat, and mission results are recorded. Starting a new campaign preserves the session log; refreshing the page clears it.
+Deep Signal is a compact playable prototype. Its 10–15 minute target is a design goal. The current route has not been validated against that duration.
 
-To analyze the CSV, group events by run. Use the final cumulative shots and hits to calculate accuracy and compare active play time for completed runs. Treat runs without a win or loss as incomplete.
+## Run locally
 
-## Build on it
+Install **Godot 4.7.2 stable**, import `godot/project.godot`, and press **F5**. The project uses the Compatibility renderer.
 
-The entry page is `index.html`. Gameplay, rendering and menus are in `src/game.js`, encounter systems are in `src/bunker-systems.js`, and mission definitions are in `src/missions/`. Original procedural art and synthesized sound are in `src/bunker-art.js` and `src/audio.js`. Styles are in `styles/game.css`. These load locally without a build step. Maps are grids of walls and open tiles. The raycasting function finds wall intersections, the update loop handles gameplay, and the renderer draws the scene.
+From the repository root, with the matching engine on your PATH:
 
-```text
-bunker-07/
-├── index.html               # Browser / GitHub Pages entry point
-├── src/                     # Game code, art and audio
-│   └── missions/            # Mission definitions
-├── styles/                  # Game and menu styles
-├── tests/                   # Browser checks
-│   └── fixtures/            # Before-upgrade comparison page
-├── docs/                    # Research, reports and test results
-│   └── screenshots/         # Visual evidence
-├── package.json             # Optional development test commands
-└── README.md
+```bash
+godot --path godot
 ```
 
-- [ ] Playtest mouse capture, settings persistence, and CSV export in additional desktop browsers.
-- [x] Browser-test campaign progression, retries, and mission CSV analytics in Chrome on Windows.
-- [ ] Validate across additional browsers and storage-restricted environments.
-- [ ] Display accuracy and completion times across attempts.
+The hosted site is built from this Godot project by GitHub Actions. Its `build-info.json` records the deployed commit and resource hashes.
 
-There is no build step. Use a desktop browser for the full first-person experience; an optional browser test harness is described below.
+## Repository guide
 
-## Control Room visual upgrade
+| Location | Contents |
+| --- | --- |
+| `godot/scripts/` | Player controls, missions, combat, AI, menus, and analytics |
+| `godot/scenes/` | Game entry point and reusable scenes |
+| `godot/tests/` | Godot regression programs |
+| `scripts/` | Test runner, web export, and artifact validation |
+| `tests/` | Packaging checks and legacy browser tests |
+| `docs/godot/` | Architecture, verification, screenshots, and development reports |
+| `assets/source/` | Original art source and provenance |
+| `src/`, `styles/`, `classic.html` | Original JavaScript edition |
 
-The industrial art, renderer constraints, applied Lode / Level Design Book techniques, before-and-after screenshots and browser verification are documented in [the upgrade report](docs/control-room-upgrade.md). All new visual assets are original procedural drawings; see [asset provenance](docs/assets.md). The optional development browser harness runs with `npm install` and `npm test` (Windows Chrome); playing the game needs neither.
+The [classic JavaScript game](https://jnoble555.github.io/bunker-07/classic.html) is also playable. Its controls and implementation differ from the Godot edition.
 
-## Reactive bunker encounters
+## Development checks
 
-Control Room now has a scanning camera, an armored patrol that investigates shots, and a fast scout reinforcement. Shoot the camera or service lamp, reroute maintenance power to blind surveillance at the cost of lighting, operate the bulkhead, or overload the grid once to stagger nearby visible enemies. Aim at a device's horizontal position; the renderer has no vertical aiming. Press E at the separate alarm panel to prevent/silence the alarm. Nearby devices show an E prompt while the mission objective remains visible.
+```bash
+godot --headless --path godot --editor --import --quit
+python scripts/run_godot_tests.py --godot godot --logs /tmp/bunker-tests
+python -m unittest discover -s tests -p test_web_build.py -v
+```
 
-The archive near the core holds optional intel: taking it triggers security unless the alarm panel is disabled. Search the maintenance alcove for a one-use medical cache and recovered log. Use J or the pause menu to read transmissions. Intel, secrets, active time, accuracy and stealth contribute to local result ranks; there is no online leaderboard. Camera and lamp hits count toward accuracy.
+See the [web release procedure](docs/godot/web-release.md) for clean-commit exports and deployment validation. Historical reports under `docs/` describe the build and verification state at the time they were written.
 
-Extracting after a quiet panel shutdown disables Blackout's stationary ranged turret. An alarm instead adds an armored pursuer. Recovered intel supplies a later clue. These consequences commit only on successful extraction; failed attempts reset devices and provisional rewards. Start Campaign clears prior campaign decisions while preserving the current session CSV.
+## Project notes
 
-New impact sparks, enemy stagger, damage-direction cues and positional synthesized audio reinforce combat. All visual/audio assets are original. Implementation details, limits and verification are in [the expansion report](docs/next-level-release.md), [systems documentation](docs/encounter-systems.md), and [art/audio provenance](docs/feedback-assets.md). `npm test` runs both the existing campaign checks and the independently authored encounter suite.
-
-## Native tactical PvE playtest
-
-The Godot title menu now offers **Deep Signal / Tactical Operation**, separate from the original campaign. It adds armed SMG/rifle patrols, alternate approaches, elevated operations, optional supplies and a collectible shotgun. Open `godot/project.godot` and press F5. See [launch, validation and unfinished stretch work](docs/godot/tactical-pve-expansion.md).
-
-## Desktop visual benchmark
-
-[Deep Signal visual benchmark](docs/godot/deep-signal-visual-benchmark.md): original Blender architecture, PBR surfaces, desktop Forward+ lighting, compact HUD, matching before/after views and measured performance. It is an opt-in local scene on the visual benchmark branch; the hosted edition retains its existing presentation.
+- [Coordinated search behavior](docs/godot/ghost-protocol-search.md)
+- [AI architecture](docs/godot/ghost-protocol-architecture.md)
+- [Weapon inventory](docs/godot/weapon-inventory.md)
+- [Desktop visual benchmark](docs/godot/deep-signal-visual-benchmark.md)
+- [Original art and audio](docs/assets.md)

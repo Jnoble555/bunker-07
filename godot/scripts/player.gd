@@ -14,6 +14,7 @@ var crouched := false
 var aiming := false
 var pitch := 0.0
 var lean := 0.0
+var aim_blend := 0.0
 
 
 func setup(owner_controller: Node) -> void:
@@ -88,6 +89,7 @@ func reset_player() -> void:
 	aiming = false
 	pitch = 0.0
 	lean = 0.0
+	aim_blend = 0.0
 	if body_shape:
 		body_shape.shape.height = 1.8
 		body_shape.position.y = 0.9
@@ -137,16 +139,21 @@ func _physics_process(delta: float) -> void:
 	camera.position = eye + Vector3(lean, 0, 0)
 	camera.rotation = Vector3(pitch, 0, -lean * 0.22)
 	camera.fov = lerpf(camera.fov, 58.0 if aiming else rad_to_deg(2 * atan(0.68)), minf(1, delta * 14))
-	# The isolated viewmodel has its own camera and must track the gameplay zoom.
-	if weapon_camera: weapon_camera.fov = camera.fov
+	# Align the authored pistol sights with the shot ray. Reload releases the sight picture.
+	var sighting: bool = aiming and controller.reload_remaining <= 0 and controller.get_weapon_def().name == "SECURITY PISTOL"
+	aim_blend = move_toward(aim_blend, 1.0 if sighting else 0.0, delta * 9.0)
+	weapon_camera.fov = camera.fov
 	# Raise the weapon during its defined reload so the magazine stays visible.
 	var reload_offset: float = 0.0
 	if controller.reload_remaining > 0:
 		var progress: float = 1.0 - controller.reload_remaining / controller.get_weapon_def().reload
 		reload_offset = (progress / 0.25 if progress < 0.25 else (1.0 - progress) / 0.75) * -0.07
 	var sway: float = sin(controller.elapsed * 10) * 0.012 if input.length() > 0 else 0.0
-	weapon.position = Vector3(WEAPON_IDLE_POSITION.x + sway, WEAPON_IDLE_POSITION.y - reload_offset, WEAPON_IDLE_POSITION.z + controller.flash * 0.8)
+	var hip_position := WEAPON_IDLE_POSITION + Vector3(sway, -reload_offset, 0)
+	var sight_position := Vector3(0, -0.107 * weapon.scale.y, -0.40)
+	weapon.position = hip_position.lerp(sight_position, aim_blend) + Vector3(0, 0, controller.flash * 0.8)
 	weapon.pose(controller.flash, controller.reload_remaining, controller.get_weapon_def().reload, controller.get_weapon_def().recoil)
+	weapon.rotation.y = lerpf(weapon.rotation.y, 0.0, aim_blend)
 	muzzle.position = controller.get_weapon_def().muzzle
 	muzzle_light.position = muzzle.position
 	muzzle.visible = controller.flash > 0
@@ -162,8 +169,8 @@ func _make_weapon_view(model: Node3D) -> void:
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(viewport)
 	var view_camera := Camera3D.new()
-	view_camera.fov = camera.fov
 	weapon_camera = view_camera
+	view_camera.fov = camera.fov
 	view_camera.keep_aspect = camera.keep_aspect
 	view_camera.near = 0.02
 	viewport.add_child(view_camera)
@@ -237,6 +244,7 @@ func _notification(what: int) -> void:
 		clear_held_inputs()
 
 func apply_look(relative: Vector2) -> void:
-	rotate_y(-relative.x * float(controller.session.preferences.sensitivity))
-	pitch = clampf(pitch - relative.y * float(controller.session.preferences.sensitivity), deg_to_rad(-80), deg_to_rad(80))
+	var sensitivity := float(controller.session.preferences.sensitivity) * (0.65 if aiming else 1.0)
+	rotate_y(-relative.x * sensitivity)
+	pitch = clampf(pitch - relative.y * sensitivity, deg_to_rad(-80), deg_to_rad(80))
 	camera.rotation.x = pitch

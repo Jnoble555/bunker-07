@@ -149,7 +149,7 @@ func run() -> void:
 	await frames(3)
 	for enemy in game.enemies: enemy.set_physics_process(false)
 	check("retry rebuilds visuals once and resets encounter",game.operation_stage==0 and game.ammo==8 and game.enemies.size()==8 and (game.art==null if baseline else game.room.get_node_or_null("ControlRoomArt")==game.art))
-	check("retry restores terminal-ready display",(game.room.get_node("AccessTerminal/TerminalLabel") as Label3D).text=="ACCESS / E")
+	check("retry restores terminal-ready display",(game.room.get_node("AccessTerminal/TerminalLabel") as Label3D).text=="ACCESS / F")
 	print("VISUAL BENCHMARK CHECKS ",checks-failures,"/",checks," failures=",failures)
 	game.queue_free()
 	await create_timer(.2,true).timeout

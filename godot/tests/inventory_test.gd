@@ -41,7 +41,7 @@ func run() -> void:
 	blocker.queue_free()
 	await frames(3)
 	game.interact()
-	check("E acquires SMG without changing current weapon",game.weapon_ammo.has("smg") and game.weapon_id=="pistol")
+	check("F acquires SMG without changing current weapon",game.weapon_ammo.has("smg") and game.weapon_id=="pistol")
 	game.shoot()
 	game.request_action("weapon_2")
 	await frames(2)

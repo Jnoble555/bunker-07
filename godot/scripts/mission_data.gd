@@ -13,7 +13,7 @@ static func all_missions() -> Array[Dictionary]:
 		"spawn":Vector3(3,0,17),"panel":Vector3(9,0,15),"core":Vector3(17,0,11),"exit":Vector3(23,0,3),
 		"bots":[{"id":"guard_1","position":Vector3(9,0,11),"role":"armored","hp":3,"is_guard":true}]},
 		{"id":"blackout", "title":"BLACKOUT", "objective":"restore_power",
-		"briefing":"Find the southwest BACKUP POWER switch and press E. Then reach the extraction lift. Emergency guidance remains visible; the security turret is independent of backup power.",
+		"briefing":"Find the southwest BACKUP POWER switch and press F. Then reach the extraction lift. Emergency guidance remains visible; the security turret is independent of backup power.",
 		"map":["#############","#...........#","#.###...###.#","#...#...#...#","#...#.......#","#.......###.#","#.###.....#.#","#...........#","#...........#","#############"],
 		"spawn":Vector3(3,0,3),"panel":Vector3(7,0,15),"core":Vector3.ZERO,"exit":Vector3(23,0,3),
 		"bots":[{"id":"guard-1","position":Vector3(21,0,7),"role":"turret","hp":3,"is_guard":false}]}
