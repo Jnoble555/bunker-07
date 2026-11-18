@@ -1,5 +1,7 @@
 # Bunker 07
 
+[Project documentation guide](docs/README.md) — current setup, systems, historical reports and repository layout.
+
 A first-person tactical game built with **Godot 4.7.2**, developed with OpenAI Codex for a Web Analytics class.
 
 **[Play in your browser](https://jnoble555.github.io/bunker-07/)** · [Controls and local setup](godot/README.md) · [Build identity](https://jnoble555.github.io/bunker-07/build-info.json)
