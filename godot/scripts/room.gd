@@ -268,7 +268,7 @@ func _make_panel() -> void:
 		# E remains in the HUD's close-range prompt; this small world label is only a locator.
 		_label("ALARM PANEL", _panel_position + Vector3(0, 1.62, -0.8), Vector3.ZERO, Color("8ed5c8"), self, 30, 0.0018, 3)
 	else:
-		_label("E / BACKUP POWER", _panel_position + Vector3(0, 1.9, 0), Vector3.ZERO, Color("8ed5c8"))
+		_label("F / BACKUP POWER", _panel_position + Vector3(0, 1.9, 0), Vector3.ZERO, Color("8ed5c8"))
 
 func _make_core() -> void:
 	var core := Node3D.new()
@@ -317,7 +317,7 @@ func _make_control_devices() -> void:
 		_mesh_box(self, "DeviceBezel", at + Vector3(0, 1.15, 0), Vector3(0.65, 0.5, 0.25), _materials["dark"])
 		_mesh_box(self, "DeviceScreen", at + Vector3(-0.331, 1.15, 0), Vector3(0.015, 0.32, 0.18), _materials["cyan"])
 		_label(str(entry[0]), at + Vector3(0, 1.95, 0), Vector3.ZERO, Color("8ed5c8"))
-	_label("E / BULKHEAD SWITCH", Vector3(15, 1.9, 15), Vector3.ZERO, Color("d8ca90"))
+	_label("F / BULKHEAD SWITCH", Vector3(15, 1.9, 15), Vector3.ZERO, Color("d8ca90"))
 	var camera := Node3D.new()
 	camera.name = "SecurityCamera"
 	camera.position = Vector3(14.6, 0, 11)

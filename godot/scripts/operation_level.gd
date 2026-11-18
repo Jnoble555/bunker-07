@@ -62,13 +62,13 @@ func build() -> void:
 	# Safety rails preserve the broad ramp and stair openings.
 	_solid("WestRail",Vector3(36.05,1.7,41.5),Vector3(0.1,1,9),"trim")
 	_solid("SouthRail",Vector3(41,1.7,45.95),Vector3(10,1,0.1),"trim")
-	_terminal("access",Vector3(12,0,40),"SERVICE ACCESS / E")
-	_terminal("data",Vector3(41,1.2,41),"OPERATION ARCHIVE / E")
+	_terminal("access",Vector3(12,0,40),"SERVICE ACCESS / F")
+	_terminal("data",Vector3(41,1.2,41),"OPERATION ARCHIVE / F")
 	_mesh("LiftPad",Vector3(59,0.02,41),Vector3(2,0.04,2),"green")
 	for x in [57.6,60.4]:
 		_solid("LiftPost",Vector3(x,1.3,42.5),Vector3(0.15,2.6,0.15),"steel")
 		_mesh("LiftGuide",Vector3(x,1.5,42.4),Vector3(0.09,1.8,0.04),"green")
-	_label("EXTRACTION / E",Vector3(59,2.8,42.6),PI,Color("9fceaa"))
+	_label("EXTRACTION / F",Vector3(59,2.8,42.6),PI,Color("9fceaa"))
 	_label("SECURITY 01",Vector3(19.72,2.6,6),-PI/2,Color("d4b870"))
 	_label("MAINTENANCE 02",Vector3(6,2.5,19.72),PI,Color("8cc7bb"))
 	_label("OPERATIONS 03",Vector3(36,2.6,28.3),0,Color("99c3cc"))

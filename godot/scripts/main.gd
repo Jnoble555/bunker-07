@@ -67,8 +67,8 @@ func _install_inputs() -> void:
 		"move_forward": [KEY_W, KEY_UP], "move_back": [KEY_S, KEY_DOWN],
 		"strafe_left": [KEY_A], "strafe_right": [KEY_D],
 		"turn_left": [KEY_LEFT], "turn_right": [KEY_RIGHT], "fire": [KEY_SPACE],
-		"weapon_3": [KEY_3], "weapon_1": [KEY_1], "weapon_2": [KEY_2], "crouch": [KEY_CTRL], "sprint": [KEY_SHIFT], "lean_left": [KEY_Q], "lean_right": [KEY_C],
-		"reload": [KEY_R], "interact": [KEY_E], "pause": [KEY_ESCAPE, KEY_P], "retry": [KEY_F5]
+		"weapon_3": [KEY_3], "weapon_1": [KEY_1], "weapon_2": [KEY_2], "crouch": [KEY_CTRL], "sprint": [KEY_SHIFT], "lean_left": [KEY_Q], "lean_right": [KEY_E, KEY_C],
+		"reload": [KEY_R], "interact": [KEY_F], "pause": [KEY_ESCAPE, KEY_P], "retry": [KEY_F5]
 	}
 	for action in bindings:
 		if not InputMap.has_action(action):
@@ -166,7 +166,7 @@ func show_title() -> void:
 	get_tree().paused = false
 	pending_actions.clear()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_show_menu("title", "BUNKER 07", "PARTIAL GODOT PORT / CONTROL ROOM M1\n\nDisable the alarm panel in maintenance, secure the core, and extract.\nOne armored patrol is active. Cameras and reinforcements are not ported yet.\n\nWASD / Up, Down: move · Mouse / Left, Right: aim\nClick / Space: fire · R: reload · E: panel · Esc / P: pause · F5: retry\n\nThe browser version remains the complete three-mission game.")
+	_show_menu("title", "BUNKER 07", "PARTIAL GODOT PORT / CONTROL ROOM M1\n\nDisable the alarm panel in maintenance, secure the core, and extract.\nOne armored patrol is active. Cameras and reinforcements are not ported yet.\n\nWASD / Up, Down: move · Mouse / Left, Right: aim\nClick / Space: fire · R: reload · F: panel · Esc / P: pause · F5: retry\n\nThe browser version remains the complete three-mission game.")
 
 func _physics_process(delta: float) -> void:
 	if not active or get_tree().paused:
@@ -367,7 +367,7 @@ func _update_hud() -> void:
 	hud.text = "BUNKER 07 / PARTIAL GODOT PORT   |   HEALTH %d   AMMO %d/8   %.0fs" % [health, ammo, elapsed]
 	var objective := "CORE SECURED · REACH EXTRACTION" if core_collected else "DISABLE PANEL OR RISK DETECTION · SECURE CORE"
 	if planar_distance(player.global_position, PANEL) <= 1.7:
-		objective += "   |   " + ("PANEL OFF" if panel_disabled else "E · DISABLE / SILENCE ALARM")
+		objective += "   |   " + ("PANEL OFF" if panel_disabled else "F · DISABLE / SILENCE ALARM")
 	status.text = objective
 	var warnings: Array[String] = []
 	if alarm_active: warnings.append("ALARM ACTIVE (reinforcements not ported)")

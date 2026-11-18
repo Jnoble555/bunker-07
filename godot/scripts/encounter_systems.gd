@@ -193,7 +193,7 @@ func nearby() -> Dictionary:
 func prompt() -> String:
 	var device := nearby()
 	if not device.is_empty():
-		return "E · " + str(device["label"])
+		return "F · " + str(device["label"])
 	if camera_alert > 0:
 		return "CAMERA TRACKING · %d%%" % ceili(camera_alert / 1.25 * 100)
 	if not investigation.is_empty():

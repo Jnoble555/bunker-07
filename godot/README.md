@@ -1,6 +1,6 @@
-# Bunker 07 — native campaign preview
+# Bunker 07 — Godot setup and controls
 
-The Godot version now includes **Breach → Control Room → Blackout**, with reactive security, tactical devices, optional objectives, campaign consequences and results. It remains a native preview rather than a claim of identical audiovisual output or cross-platform certification. The unchanged [browser game](https://jnoble555.github.io/bunker-07/) is the behavioral reference.
+The Godot project powers the [live browser game](https://jnoble555.github.io/bunker-07/). Choose Deep Signal for the class demo, or select the original campaign or Iron Relay from the title menu.
 
 ## Launch
 
@@ -21,12 +21,12 @@ Replace the executable path on another machine; add `--editor` to open the edito
 | Mouse / Left, Right | Full mouse look / keyboard yaw |
 | Ctrl (hold) | Crouch; standing requires headroom |
 | Shift (hold) | Sprint |
-| Q / C (hold) | Lean left / right, constrained by obstacles |
-| Right mouse (hold) | Aim with reduced FOV and speed |
+| Q / E (hold) | Lean left / right, constrained by obstacles |
+| Right mouse (hold) | Aim with reduced FOV, look sensitivity and speed; pistol iron sights |
 | Click / Space | Fire |
 | R | Reload from finite reserve |
 | 1 / 2 / 3 | Owned pistol / SMG / shotgun (operation) |
-| E | Use nearby panel/device or collect weapon/ammo |
+| F | Use nearby panel/device or collect weapon/ammo |
 | J | Open paused field journal |
 | P / Esc | Pause/resume; return from submenus |
 | F5 | Retry current mission |

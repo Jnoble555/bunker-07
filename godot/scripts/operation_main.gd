@@ -61,7 +61,7 @@ func show_briefing() -> void:
 	active = false
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_show_menu("briefing","OPERATION: IRON RELAY",str(mission.briefing)+"\n\n1 pistol / 2 SMG / 3 shotgun. E collects and operates terminals. Each retry restores the complete operation. No checkpoint save is available in this milestone.")
+	_show_menu("briefing","OPERATION: IRON RELAY",str(mission.briefing)+"\n\n1 pistol / 2 SMG / 3 shotgun. F collects and operates terminals. Each retry restores the complete operation. No checkpoint save is available in this milestone.")
 
 func start_run() -> void:
 	objective_stage = 0
@@ -117,9 +117,9 @@ func _update_hud() -> void:
 		return
 	var at: Vector3 = goal.position
 	status.text = "%d/3 / %s / %.0fm" % [objective_stage+1,goal.label,player.global_position.distance_to(at)]
-	if objective_reachable(goal): status.text += " / E TO OPERATE"
+	if objective_reachable(goal): status.text += " / F TO OPERATE"
 	var item := nearby_pickup()
-	if not item.is_empty(): status.text += " / E "+str(item.label)
+	if not item.is_empty(): status.text += " / F "+str(item.label)
 
 func finish(won: bool) -> void:
 	if not active: return

@@ -35,6 +35,28 @@ func run() -> void:
 	Input.action_press("aim_weapon")
 	await frames(5)
 	check("aim narrows FOV and slows movement",p.camera.fov < 65 and Vector2(p.velocity.x,p.velocity.z).length() < walk_speed)
+	await frames(12)
+	check("pistol sights settle on the shot axis",p.aim_blend > .99 and absf(p.weapon.position.x) < .001 and absf(p.weapon.rotation.y) < .001)
+	check("weapon lens matches aiming camera",is_equal_approx(p.weapon_camera.fov,p.camera.fov))
+	var saved_pitch: float = p.pitch
+	p.apply_look(Vector2(0,10))
+	var aimed_change: float = absf(p.pitch-saved_pitch)
+	p.clear_held_inputs()
+	saved_pitch = p.pitch
+	p.apply_look(Vector2(0,10))
+	check("aiming reduces mouse sensitivity",aimed_change < absf(p.pitch-saved_pitch))
+	var right_key := InputEventKey.new()
+	right_key.physical_keycode = KEY_E
+	var use_key := InputEventKey.new()
+	use_key.physical_keycode = KEY_F
+	check("E leans and F interacts without conflict",InputMap.action_has_event("lean_right",right_key) and not InputMap.action_has_event("interact",right_key) and InputMap.action_has_event("interact",use_key))
+	Input.action_press("lean_left")
+	await frames(3)
+	check("left lean moves camera left",p.lean < -.25)
+	Input.action_release("lean_left")
+	Input.action_press("lean_right")
+	await frames(3)
+	check("right lean moves camera right",p.lean > .25)
 	p.clear_held_inputs()
 	Input.action_press("crouch")
 	Input.action_press("move_forward")
@@ -83,11 +105,13 @@ func run() -> void:
 	p.pitch = p.camera.rotation.x
 	game.shoot()
 	check("camera-directed vertical shot hits elevated target",target.hp == 2)
+	check("target impact confirms a hit",game.hit_feedback > 0)
 	var blocker = game.box("VerticalOccluder",Vector3(100,3.0,102),Vector3(2,2,0.3))
 	await frames(3)
 	game.cooldown = 0
 	game.shoot()
 	check("solid geometry occludes vertical shot",target.hp == 2)
+	check("blocked shot shows surface impact without a confirmed hit",game.impact_feedback > 0 and game.hit_feedback == 0)
 	check("interaction and enemy sight respect elevated obstacle",not game.interaction_los(p.camera.global_position,target.global_position + Vector3(0,1.4,0)) and not target._can_see(p))
 	Input.action_press("aim_weapon")
 	Input.action_press("sprint")

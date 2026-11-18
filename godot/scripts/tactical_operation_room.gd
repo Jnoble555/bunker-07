@@ -40,8 +40,8 @@ func build(config: Dictionary = {}) -> void:
 	wall("DeckSouthRailB",Vector3(45.4,1.7,15.7),Vector3(8.8,1,.2))
 	for p: Vector3 in [Vector3(20,0,41),Vector3(27,0,35),Vector3(22,0,28),Vector3(11,0,27),Vector3(6,0,19),Vector3(24,0,23),Vector3(29,0,20),Vector3(42,0,29),Vector3(44,0,36),Vector3(40,0,44),Vector3(41,1.2,10),Vector3(46,1.2,13),Vector3(36,1.2,5)]:
 		cover(p)
-	terminal("ACCESS / E",config.panel,Color("e0ad55"))
-	terminal("DEEP SIGNAL / E",config.core,Color("79d7d8"))
+	terminal("ACCESS / F",config.panel,Color("e0ad55"))
+	terminal("DEEP SIGNAL / F",config.core,Color("79d7d8"))
 	_archive = get_child(get_child_count()-1)
 	_mesh_box(self,"LiftPad",config.exit+Vector3(0,.04,0),Vector3(3,.08,3),_materials.cyan)
 	for sign: Array in [["01 / SECURITY",Vector3(24,3,44)],["02 / MAINTENANCE",Vector3(7,3,28)],["03 / RELAY",Vector3(24,3,23)],["ARMORY / OPTIONAL",Vector3(42,3,44)],["04 / OPERATIONS",Vector3(43,3.6,8)],["EXTRACTION",Vector3(45,3.6,3)]]:
@@ -63,9 +63,11 @@ func wall(id: String, center: Vector3, size: Vector3) -> void:
 	solids.append(AABB(center-size/2,size))
 
 func cover(at: Vector3) -> void:
-	var size := Vector3(2.4,1.25,1.2)
-	_solid_box("SolidCover",at+Vector3(0,.625,0),size,_materials.steel)
-	solids.append(AABB(at+Vector3(0,.625,0)-size/2,size))
+	var height := 1.5 if at in [Vector3(20,0,41), Vector3(27,0,35)] else 1.25
+	var size := Vector3(2.4,height,1.2)
+	var center := at + Vector3(0,height / 2,0)
+	_solid_box("SolidCover",center,size,_materials.steel)
+	solids.append(AABB(center-size/2,size))
 	_mesh_box(self,"CoverStripe",at+Vector3(0,1.15,-.61),Vector3(2.2,.12,.025),_materials.cyan)
 	for offset: Vector3 in [Vector3(0,0,1.5),Vector3(0,0,-1.5),Vector3(2,0,0),Vector3(-2,0,0)]:
 		cover_points.append(at+offset)

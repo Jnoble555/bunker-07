@@ -338,6 +338,21 @@ func run() -> void:
 	check("blocked recovery releases the investigator without snapping movement",
 		incident().is_empty() and receiver._search_assignment.is_empty()
 		and receiver.global_position == Vector3(27,0,35))
+	await fresh()
+	for cover_at: Vector3 in [Vector3(20,0,41), Vector3(27,0,35)]:
+		sender.global_position = cover_at + Vector3(0,0,-3)
+		sender.state = "engage"
+		game.player.global_position = cover_at + Vector3(0,0,2)
+		game.player.rotation = Vector3.ZERO
+		Input.action_press("crouch")
+		game.player._physics_process(.016)
+		await frames(3)
+		var health_before: int = game.health
+		var magazine_before: int = sender.magazine
+		sender._fire()
+		check("SECURITY retreat cover blocks crouched sight and gunfire at " + str(cover_at),
+			not sender.can_see_player() and game.health == health_before and sender.magazine == magazine_before)
+		game.player.clear_held_inputs()
 	print("SECURITY SEARCH: %d/%d passed; failures=%d" % [checks - failures, checks, failures])
 	game.queue_free()
 	await frames(2)

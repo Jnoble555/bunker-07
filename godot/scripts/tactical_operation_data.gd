@@ -3,7 +3,7 @@ extends RefCounted
 static func definition() -> Dictionary:
 	return {
 		"id":"tactical-operation", "title":"DEEP SIGNAL", "objective":"tactical",
-		"briefing":"Recover the DEEP SIGNAL archive.\n\n1. Restore access at SECURITY / amber terminal.\n2. Reach elevated OPERATIONS via the striped ramp and recover data.\n3. Extract through the northeast lift.\n\nThe west MAINTENANCE route bypasses the security firing lane. The southeast ARMORY holds a shotgun and supplies, guarded by a rifle team. Collect weapons with E; select 1/2/3. Armed teams investigate gunfire and search last known positions. Break sight during their amber attack warning.\n\n10–15 minutes is a design goal, not a measured playtime. No mid-operation saves; F5 retries from entry.",
+		"briefing":"Recover the DEEP SIGNAL archive.\n\n1. Restore access at SECURITY / amber terminal.\n2. Reach elevated OPERATIONS via the striped ramp and recover data.\n3. Extract through the northeast lift.\n\nThe west MAINTENANCE route bypasses the security firing lane. The southeast ARMORY holds a shotgun and supplies, guarded by a rifle team. Collect weapons with F; select 1/2/3. Armed teams investigate gunfire and search last known positions. Break sight during their amber attack warning.\n\n10–15 minutes is a design goal, not a measured playtime. No mid-operation saves; F5 retries from entry.",
 		"spawn":Vector3(5,0,44), "panel":Vector3(23,0,39), "core":Vector3(43,1.2,7), "exit":Vector3(45,1.2,4),
 		"bots":[
 			{"id":"security-smg","position":Vector3(24,0,38),"role":"smg","hp":5,"patrol":[Vector3(24,0,38),Vector3(28,0,36)]},

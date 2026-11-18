@@ -29,7 +29,26 @@ func equip(id: String) -> void:
 	slide_home = slide.position
 	magazine_home = magazine.position
 	base_home = base.position
-	if fresh: _prepare(model)
+	if fresh:
+		_prepare(model)
+		if id == "pistol": _make_rear_notch()
+
+func _make_rear_notch() -> void:
+	var rear := model.find_child("RearSight", true, false) as MeshInstance3D
+	if not rear: return
+	rear.hide()
+	for x in [-0.014, 0.014]:
+		var post := MeshInstance3D.new()
+		var shape := BoxMesh.new()
+		shape.size = Vector3(0.009, 0.018, 0.022)
+		post.mesh = shape
+		post.position = Vector3(x, 0.098, 0.105)
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color("29323a")
+		material.roughness = 0.8
+		post.material_override = material
+		post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		model.add_child(post)
 
 func _prepare(node: Node) -> void:
 	if node is MeshInstance3D:
