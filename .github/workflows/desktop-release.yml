@@ -1,0 +1,66 @@
+name: Publish Windows Deep Signal demo
+on:
+  push:
+    tags: ['desktop-demo-*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official matching engine and Windows template
+        run: |
+          set -euo pipefail
+          version=$(cat scripts/godot-version.txt)
+          base="https://github.com/godotengine/godot-builds/releases/download/${version}-stable"
+          mkdir -p /tmp/godot
+          curl -fL --retry 3 "$base/Godot_v${version}-stable_linux.x86_64.zip" -o /tmp/godot/engine.zip
+          curl -fL --retry 3 "$base/Godot_v${version}-stable_export_templates.tpz" -o /tmp/godot/templates.tpz
+          echo 'cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  /tmp/godot/engine.zip' | sha256sum --check
+          echo 'f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011  /tmp/godot/templates.tpz' | sha256sum --check
+          unzip -q /tmp/godot/engine.zip -d /tmp/godot
+          sudo install /tmp/godot/Godot_v${version}-stable_linux.x86_64 /usr/local/bin/godot
+          mkdir -p "$HOME/.local/share/godot/export_templates/${version}.stable"
+          unzip -j -q /tmp/godot/templates.tpz 'templates/windows_release_x86_64.exe' -d "$HOME/.local/share/godot/export_templates/${version}.stable"
+      - name: Configure standalone visual demo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('godot/project.godot')
+          s = p.read_text().replace('res://scenes/control_room.tscn', 'res://scenes/deep_signal_visual_benchmark.tscn')
+          s = s.replace('renderer/rendering_method="gl_compatibility"', 'renderer/rendering_method="forward_plus"')
+          p.write_text(s)
+          PY
+      - name: Import and verify encounter
+        run: |
+          set -euo pipefail
+          godot --headless --path godot --editor --import --quit 2>&1 | tee /tmp/import.log
+          ! grep -E 'SCRIPT ERROR|Parse Error|Compilation failed' /tmp/import.log
+          godot --headless --path godot --script res://tests/visual_benchmark_test.gd 2>&1 | tee /tmp/checks.log
+          ! grep -E 'SCRIPT ERROR|FAIL |Parse Error' /tmp/checks.log
+      - name: Export standalone Windows game
+        run: |
+          mkdir -p work/desktop
+          godot --headless --path godot --export-release 'Windows Demo' "$PWD/work/desktop/Bunker07.exe"
+          test -s work/desktop/Bunker07.exe
+          cp docs/godot/DESKTOP-DEMO.txt work/desktop/READ-ME.txt
+          printf 'Source commit: %s\n' "$GITHUB_SHA" > work/desktop/BUILD.txt
+          cd work/desktop
+          zip -9 ../../Bunker07-DeepSignal-Windows.zip Bunker07.exe READ-ME.txt BUILD.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bunker07-DeepSignal-Windows
+          path: Bunker07-DeepSignal-Windows.zip
+      - name: Publish download
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" Bunker07-DeepSignal-Windows.zip --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" Bunker07-DeepSignal-Windows.zip --title 'Bunker 07 — Deep Signal Windows Demo' --notes-file docs/godot/DESKTOP-DEMO.txt
+          fi
