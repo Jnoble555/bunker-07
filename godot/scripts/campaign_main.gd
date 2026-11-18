@@ -64,6 +64,8 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().auto_accept_quit = false
 	_install_inputs()
+	if OS.has_feature("web"):
+		tutorial_steps[0] = tutorial_steps[0].replace("Ctrl crouch", "C crouch")
 	player = PlayerScript.new()
 	player.name = "Player"
 	add_child(player)
@@ -804,6 +806,7 @@ func _build_campaign_ui() -> void:
 	column.move_child(scroll,1)
 
 func _show_menu(state: String,title: String,text: String) -> void:
+	if OS.has_feature("web"): text = text.replace("Ctrl: crouch", "C: crouch")
 	if player: player.clear_held_inputs()
 	menu_state = state
 	menu_title.text = title

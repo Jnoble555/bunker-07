@@ -63,6 +63,7 @@ func _ready() -> void:
 	show_title()
 
 func _install_inputs() -> void:
+	var browser := OS.has_feature("web")
 	var bindings := {
 		"move_forward": [KEY_W, KEY_UP], "move_back": [KEY_S, KEY_DOWN],
 		"strafe_left": [KEY_A], "strafe_right": [KEY_D],
@@ -71,6 +72,12 @@ func _install_inputs() -> void:
 		"toggle_aim": [KEY_Z], "toggle_sprint": [KEY_CAPSLOCK],
 		"reload": [KEY_R], "interact": [KEY_F], "pause": [KEY_ESCAPE, KEY_P], "retry": [KEY_F5]
 	}
+	if browser:
+		bindings.crouch = [KEY_C]
+		bindings.lean_right = [KEY_E]
+	# Installation can run again when switching scenes; remove the old aliases.
+	for action in ["crouch", "lean_right"]:
+		if InputMap.has_action(action): InputMap.action_erase_events(action)
 	for action in bindings:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)

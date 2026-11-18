@@ -19,7 +19,7 @@ Replace the executable path on another machine; add `--editor` to open the edito
 | --- | --- |
 | WASD / Up, Down | Move |
 | Mouse / Left, Right | Full mouse look / keyboard yaw |
-| Ctrl (hold) | Crouch; standing requires headroom |
+| C in browser / Ctrl on desktop (hold) | Crouch; standing requires headroom |
 | Shift (hold) / Caps Lock (toggle) | Sprint |
 | Q / E | Lean left / right; optional toggle mode in Settings, constrained by obstacles |
 | Right mouse (hold) / Z (toggle) | Aim with reduced FOV, look sensitivity and speed; pistol iron sights |

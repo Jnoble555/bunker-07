@@ -77,3 +77,4 @@ func _update_hud() -> void:
 	if not hud: return
 	hud.text = "MOVEMENT LAB / NO CAMPAIGN PROGRESS"
 	status.text = "WASD / Ctrl crouch / Shift sprint / Q/E lean / RMB aim / F interact / F5 reset"
+	if OS.has_feature("web"): status.text = status.text.replace("Ctrl crouch", "C crouch")

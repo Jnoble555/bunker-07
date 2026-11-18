@@ -24,7 +24,7 @@ Take the west MAINTENANCE route to avoid the direct security lane. An SMG and am
 | Mouse | Look |
 | Left click / Space | Fire |
 | Right mouse, held / Z, toggle | Aim; pistol iron sights |
-| Ctrl, held | Crouch |
+| C in browser / Ctrl on desktop, held | Crouch |
 | Shift, held / Caps Lock, toggle | Sprint |
 | Q / E | Lean left / right; hold by default, toggle option in Settings |
 | F | Interact or collect supplies |
