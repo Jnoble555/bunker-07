@@ -265,7 +265,7 @@ func _make_panel() -> void:
 	var control_console: bool = mission_id == "control-room"
 	_panel_light = _light(_panel_position + Vector3(-0.6, 1.85, 0), Color("7fa99b") if control_console else Color("62dac5"), 0.22 if control_console else 0.75, 3.0 if control_console else 4.5)
 	if control_console:
-		# E remains in the HUD's close-range prompt; this small world label is only a locator.
+		# F remains in the HUD's close-range prompt; this small world label is only a locator.
 		_label("ALARM PANEL", _panel_position + Vector3(0, 1.62, -0.8), Vector3.ZERO, Color("8ed5c8"), self, 30, 0.0018, 3)
 	else:
 		_label("F / BACKUP POWER", _panel_position + Vector3(0, 1.9, 0), Vector3.ZERO, Color("8ed5c8"))

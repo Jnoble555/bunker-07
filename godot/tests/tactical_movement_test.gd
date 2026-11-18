@@ -12,6 +12,7 @@ func run() -> void:
 	root.add_child(game)
 	await frames(8)
 	var p = game.player
+	check("first-person and weapon cameras start with matching FOV",is_equal_approx(p.camera.fov,p.weapon_camera.fov))
 	await capture("movement-lab")
 	p.global_position = Vector3(96,0,100)
 	Input.action_press("crouch")
@@ -57,6 +58,7 @@ func run() -> void:
 	Input.action_press("lean_right")
 	await frames(3)
 	check("right lean moves camera right",p.lean > .25)
+	check("aim zoom stays aligned between gameplay and weapon views",is_equal_approx(p.camera.fov,p.weapon_camera.fov))
 	p.clear_held_inputs()
 	Input.action_press("crouch")
 	Input.action_press("move_forward")
@@ -126,6 +128,7 @@ func run() -> void:
 	game.retry_run()
 	await frames(3)
 	check("retry restores pitch crouch lean aim",not p.crouched and not p.aiming and p.pitch == 0 and p.lean == 0)
+	check("retry restores matching gameplay and weapon FOV",is_equal_approx(p.camera.fov,p.weapon_camera.fov))
 	print("TACTICAL failures: ",failed)
 	game.queue_free()
 	await create_timer(.2).timeout

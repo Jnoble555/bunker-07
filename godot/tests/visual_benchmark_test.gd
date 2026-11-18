@@ -53,17 +53,34 @@ func run() -> void:
 	game = load("res://scenes/deep_signal_visual_benchmark.tscn").instantiate()
 	root.add_child(game)
 	await frames(4)
+	# GUI automation can start without focus; recover the intentional focus-loss
+	# pause before deterministic captures and objective interactions.
+	game.set_paused(false)
 	for enemy in game.enemies: enemy.set_physics_process(false)
 	check("showcase starts actual Deep Signal",game.operation_mode and game.mission.title=="DEEP SIGNAL" and game.active)
 	check("all eight mission actors retained",game.enemies.size()==8)
 	check("world collision shapes and transforms unchanged",geometry(game.room)==expected_geometry)
 	check("cover and navigation path unchanged",game.room.cover_points==expected_cover and game.room.tactical_path(game.mission.spawn,game.mission.panel)==expected_path)
 	check("visual layer opt-in and batched",game.art==null if baseline else game.art.module_count>30 and game.art.find_children("*","MultiMeshInstance3D",true,false).size()>0)
+	var access_console: Node3D = game.room.get_node_or_null("AccessTerminal/ConsoleVisual")
+	var archive_console: Node3D = game.room.get_node_or_null("ArchiveTerminal/ConsoleVisual")
+	check("Deep Signal uses original console visuals without adding colliders",
+		access_console != null and archive_console != null
+		and access_console.get_node_or_null("RecessedDisplay") is MeshInstance3D
+		and access_console.find_children("*","CollisionObject3D",true,false).is_empty()
+		and geometry(game.room)==expected_geometry)
+	var display_material := (access_console.get_node("RecessedDisplay") as MeshInstance3D).material_override as StandardMaterial3D
+	var readout := access_console.find_child("ReadoutMain",true,false) as MeshInstance3D
+	var readout_material := readout.material_override as StandardMaterial3D
+	check("dark screen separates restrained emissive readouts",
+		display_material.albedo_color.get_luminance() < readout_material.albedo_color.get_luminance()
+		and display_material.emission_energy_multiplier < readout_material.emission_energy_multiplier)
 	var renderer := RenderingServer.get_current_rendering_method()
 	var prefix := ("before" if baseline else "after")+"-"+renderer
 	var views := [
 		["entry",Vector3(5,0,44),Vector3(22,1.5,38)],
 		["security",Vector3(20,0,42),Vector3(23,1.4,39)],
+		["terminal-approach",Vector3(21.7,0,40.2),Vector3(23,1.35,39)],
 		["maintenance",Vector3(8,0,29),Vector3(7,1.4,17)],
 		["operations",Vector3(38,1.2,13),Vector3(43,2.6,7)],
 		["guard-detail",Vector3(40,1.2,11),Vector3(37,2.0,9)]
@@ -97,7 +114,11 @@ func run() -> void:
 		file.close()
 		print("BENCHMARK ",JSON.stringify(data))
 	# Actual objective interaction at normal reach, with and without intervening geometry.
-	await place(Vector3(23,0,40.4),Vector3(23,1.35,39))
+	# Clear the security firing lane for a readable staged console interaction view.
+	for enemy in game.enemies:
+		if enemy.name == "security-smg": enemy.global_position = Vector3(29,0,35)
+	await place(Vector3(21.7,0,40.2),Vector3(23,1.35,39))
+	await capture(prefix+"-terminal-ready")
 	var wall := StaticBody3D.new()
 	wall.position = Vector3(23,1.5,39.7)
 	var collider := CollisionShape3D.new()
@@ -113,6 +134,8 @@ func run() -> void:
 	await frames(3)
 	game.interact()
 	check("normal approach operates access terminal",game.operation_stage==1)
+	check("access terminal confirms the interaction visually",
+		(game.room.get_node("AccessTerminal/TerminalLabel") as Label3D).text.ends_with("COMPLETE"))
 	await capture(prefix+"-access-used")
 	game.shoot()
 	game.begin_reload()
@@ -126,6 +149,7 @@ func run() -> void:
 	await frames(3)
 	for enemy in game.enemies: enemy.set_physics_process(false)
 	check("retry rebuilds visuals once and resets encounter",game.operation_stage==0 and game.ammo==8 and game.enemies.size()==8 and (game.art==null if baseline else game.room.get_node_or_null("ControlRoomArt")==game.art))
+	check("retry restores terminal-ready display",(game.room.get_node("AccessTerminal/TerminalLabel") as Label3D).text=="ACCESS / F")
 	print("VISUAL BENCHMARK CHECKS ",checks-failures,"/",checks," failures=",failures)
 	game.queue_free()
 	await create_timer(.2,true).timeout

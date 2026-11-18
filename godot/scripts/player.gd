@@ -2,8 +2,10 @@ extends CharacterBody3D
 ## Grounded tactical movement; yaw owns horizontal travel, camera owns pitch/lean.
 
 const SPEED: float = 5.3
+const WEAPON_IDLE_POSITION := Vector3(0.20, -0.21, -0.72)
 var controller: Node
 var camera: Camera3D
+var weapon_camera: Camera3D
 var weapon: Node3D
 var muzzle: MeshInstance3D
 var muzzle_light: OmniLight3D
@@ -13,7 +15,6 @@ var aiming := false
 var pitch := 0.0
 var lean := 0.0
 var aim_blend := 0.0
-var weapon_camera: Camera3D
 
 
 func setup(owner_controller: Node) -> void:
@@ -42,8 +43,8 @@ func setup(owner_controller: Node) -> void:
 	add_child(camera)
 	weapon = preload("res://scenes/security_sidearm.tscn").instantiate()
 	_make_weapon_view(weapon)
-	weapon.scale = Vector3.ONE * 0.65
-	weapon.position = Vector3(0.14, -0.07, -0.65)
+	weapon.scale = Vector3.ONE * 0.58
+	weapon.position = WEAPON_IDLE_POSITION
 	muzzle = _add_weapon_box(Vector3(0.10, 0.10, 0.06), Vector3(0, 0.055, -0.20), Color("ffce72"))
 	var glow := StandardMaterial3D.new()
 	glow.albedo_color = Color("ffe0a0")
@@ -96,8 +97,9 @@ func reset_player() -> void:
 		camera.position = Vector3(0, 1.4, 0)
 		camera.rotation = Vector3.ZERO
 		camera.fov = rad_to_deg(2 * atan(0.68))
+		if weapon_camera: weapon_camera.fov = camera.fov
 	if weapon:
-		weapon.position = Vector3(0.14, -0.07, -0.65)
+		weapon.position = WEAPON_IDLE_POSITION
 		muzzle.visible = false
 		muzzle_light.light_energy = 0
 		weapon.pose(0, 0)
@@ -147,8 +149,8 @@ func _physics_process(delta: float) -> void:
 		var progress: float = 1.0 - controller.reload_remaining / controller.get_weapon_def().reload
 		reload_offset = (progress / 0.25 if progress < 0.25 else (1.0 - progress) / 0.75) * -0.07
 	var sway: float = sin(controller.elapsed * 10) * 0.012 if input.length() > 0 else 0.0
-	var hip_position := Vector3(0.14 + sway, -0.07 - reload_offset, -0.65)
-	var sight_position := Vector3(0, -0.107 * 0.65, -0.40)
+	var hip_position := WEAPON_IDLE_POSITION + Vector3(sway, -reload_offset, 0)
+	var sight_position := Vector3(0, -0.107 * weapon.scale.y, -0.40)
 	weapon.position = hip_position.lerp(sight_position, aim_blend) + Vector3(0, 0, controller.flash * 0.8)
 	weapon.pose(controller.flash, controller.reload_remaining, controller.get_weapon_def().reload, controller.get_weapon_def().recoil)
 	weapon.rotation.y = lerpf(weapon.rotation.y, 0.0, aim_blend)

@@ -953,6 +953,7 @@ func operation_interact() -> void:
 	operation_stage += 1
 	panel_disabled = true
 	core_collected = operation_stage==2
+	room.set_terminal_complete("AccessTerminal" if operation_stage==1 else "ArchiveTerminal")
 	register_event("access_restored" if operation_stage==1 else "operation_data_recovered","deep_signal")
 	play_sound("use",target)
 	announce("ACCESS RESTORED / Reach OPERATIONS via the striped ramp." if operation_stage==1 else "DATA SECURED / Reach the northeast extraction lift.")

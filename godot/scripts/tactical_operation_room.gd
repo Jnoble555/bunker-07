@@ -4,6 +4,7 @@ extends "res://scripts/room.gd"
 var cover_points: Array[Vector3] = []
 var navigation := AStar3D.new()
 var solids: Array[AABB] = []
+var _terminals: Dictionary = {}
 var _nav_cells: Dictionary = {}
 var _access_light: MeshInstance3D
 var _archive: Node3D
@@ -40,8 +41,8 @@ func build(config: Dictionary = {}) -> void:
 	wall("DeckSouthRailB",Vector3(45.4,1.7,15.7),Vector3(8.8,1,.2))
 	for p: Vector3 in [Vector3(20,0,41),Vector3(27,0,35),Vector3(22,0,28),Vector3(11,0,27),Vector3(6,0,19),Vector3(24,0,23),Vector3(29,0,20),Vector3(42,0,29),Vector3(44,0,36),Vector3(40,0,44),Vector3(41,1.2,10),Vector3(46,1.2,13),Vector3(36,1.2,5)]:
 		cover(p)
-	terminal("ACCESS / F",config.panel,Color("e0ad55"))
-	terminal("DEEP SIGNAL / F",config.core,Color("79d7d8"))
+	terminal("ACCESS / F",config.panel,Color("e0ad55"),"AccessTerminal")
+	terminal("DEEP SIGNAL / F",config.core,Color("79d7d8"),"ArchiveTerminal")
 	_archive = get_child(get_child_count()-1)
 	_mesh_box(self,"LiftPad",config.exit+Vector3(0,.04,0),Vector3(3,.08,3),_materials.cyan)
 	for sign: Array in [["01 / SECURITY",Vector3(24,3,44)],["02 / MAINTENANCE",Vector3(7,3,28)],["03 / RELAY",Vector3(24,3,23)],["ARMORY / OPTIONAL",Vector3(42,3,44)],["04 / OPERATIONS",Vector3(43,3.6,8)],["EXTRACTION",Vector3(45,3.6,3)]]:
@@ -72,14 +73,52 @@ func cover(at: Vector3) -> void:
 	for offset: Vector3 in [Vector3(0,0,1.5),Vector3(0,0,-1.5),Vector3(2,0,0),Vector3(-2,0,0)]:
 		cover_points.append(at+offset)
 
-func terminal(text: String, at: Vector3, color: Color) -> void:
+func terminal(text: String, at: Vector3, color: Color, id: String) -> void:
 	var node := Node3D.new()
+	node.name = id
 	add_child(node)
 	node.position = at
-	_solid_box("TerminalHousing",Vector3(0,.65,.35),Vector3(.8,1.3,.5),_materials.steel,node)
+	var housing := _solid_box("TerminalHousing",Vector3(0,.65,.35),Vector3(.8,1.3,.5),_materials.steel,node)
+	# Keep the tested housing collider and replace only its box presentation.
+	(housing.get_node("Mesh") as MeshInstance3D).hide()
 	solids.append(AABB(at+Vector3(-.4,0,.1),Vector3(.8,1.3,.5)))
-	_mesh_box(node,"Screen",Vector3(0,1.35,.09),Vector3(.65,.4,.08),_emissive(color,1.2))
-	_label(text,Vector3(0,2.1,0),Vector3.ZERO,color,node,30,.002,4)
+	var console := IndustrialConsoleScene.instantiate() as Node3D
+	console.name = "ConsoleVisual"
+	console.position.z = .35
+	node.add_child(console)
+	var screen := console.get_node("RecessedDisplay") as MeshInstance3D
+	var display := screen.material_override.duplicate() as StandardMaterial3D
+	display.albedo_color = color.darkened(.92)
+	display.emission = color
+	display.emission_energy_multiplier = .025
+	screen.material_override = display
+	for readout: MeshInstance3D in console.find_children("Readout*","MeshInstance3D",true,false):
+		var material := readout.material_override as StandardMaterial3D
+		if material:
+			var accent := material.duplicate() as StandardMaterial3D
+			accent.albedo_color = color
+			accent.emission = color
+			accent.emission_energy_multiplier = .32
+			readout.material_override = accent
+	var label := _label(text,Vector3(0,2.1,0),Vector3.ZERO,color,node,30,.002,4)
+	label.name = "TerminalLabel"
+	_terminals[id] = {"text":text,"label":label,"screen":screen,"console":console}
+
+func set_terminal_complete(id: String) -> void:
+	if not _terminals.has(id): return
+	var terminal_data: Dictionary = _terminals[id]
+	var label := terminal_data.label as Label3D
+	label.text = str(terminal_data.text).replace(" / F", " / COMPLETE")
+	var screen := terminal_data.screen as MeshInstance3D
+	var display := screen.material_override as StandardMaterial3D
+	var completed := Color("75bca4")
+	display.albedo_color = completed.darkened(.76)
+	display.emission = completed
+	for readout: MeshInstance3D in terminal_data.console.find_children("Readout*","MeshInstance3D",true,false):
+		var material := readout.material_override as StandardMaterial3D
+		if material:
+			material.albedo_color = completed
+			material.emission = completed
 
 func height_at(at: Vector3) -> float:
 	if at.x>=32.75 and at.z<=15.75: return 1.2

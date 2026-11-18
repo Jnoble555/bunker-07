@@ -1,5 +1,6 @@
 extends Node3D
 ## Original procedural security-operator presentation. Gameplay collision and AI stay in deep_signal_enemy.gd.
+static var _uniform_grain: Texture2D
 var flash: MeshInstance3D
 var status: StandardMaterial3D
 var weapon_mount: Node3D
@@ -184,13 +185,60 @@ func material(color: Color, metal: float, rough: float, emission: bool = false) 
 
 func box(size: Vector3, at: Vector3, mat: Material, parent: Node = self) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	instance.mesh = mesh
+	instance.mesh = _rounded_box_mesh(size)
 	instance.position = at
 	instance.material_override = mat
 	parent.add_child(instance)
 	return instance
+
+func _rounded_box_mesh(size: Vector3) -> ArrayMesh:
+	var half := size * 0.5
+	var bevel := minf(minf(size.x, minf(size.y, size.z)) * 0.2, 0.055)
+	var faces: Array = [
+		[Vector3.RIGHT, Vector3.FORWARD, Vector3.UP],
+		[Vector3.LEFT, Vector3.BACK, Vector3.UP],
+		[Vector3.UP, Vector3.RIGHT, Vector3.FORWARD],
+		[Vector3.DOWN, Vector3.RIGHT, Vector3.BACK],
+		[Vector3.BACK, Vector3.RIGHT, Vector3.UP],
+		[Vector3.FORWARD, Vector3.LEFT, Vector3.UP]
+	]
+	const CELLS := 4
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var face_index := 0
+	for face: Array in faces:
+		var normal: Vector3 = face[0]
+		var axis_u: Vector3 = face[1]
+		var axis_v: Vector3 = face[2]
+		var start: int = face_index * (CELLS + 1) * (CELLS + 1)
+		for row in CELLS + 1:
+			for column in CELLS + 1:
+				var u := float(column) / CELLS * 2.0 - 1.0
+				var v := float(row) / CELLS * 2.0 - 1.0
+				var point := normal * half.dot(normal.abs()) + axis_u * u * half.dot(axis_u.abs()) + axis_v * v * half.dot(axis_v.abs())
+				var inner := Vector3(
+					clampf(point.x, -half.x + bevel, half.x - bevel),
+					clampf(point.y, -half.y + bevel, half.y - bevel),
+					clampf(point.z, -half.z + bevel, half.z - bevel))
+				var delta := point - inner
+				var rounded_normal := delta.normalized() if delta.length_squared() > 0.000001 else normal
+				surface.set_normal(rounded_normal)
+				surface.set_uv(Vector2(float(column) / CELLS, float(row) / CELLS))
+				surface.add_vertex(inner + rounded_normal * bevel)
+		for row in CELLS:
+			for column in CELLS:
+				var a: int = start + row * (CELLS + 1) + column
+				var b: int = a + 1
+				var d: int = a + CELLS + 1
+				var c: int = d + 1
+				surface.add_index(a)
+				surface.add_index(b)
+				surface.add_index(c)
+				surface.add_index(a)
+				surface.add_index(c)
+				surface.add_index(d)
+		face_index += 1
+	return surface.commit()
 
 func capsule(radius: float, height: float, at: Vector3, mat: Material, parent: Node, size_scale: Vector3 = Vector3.ONE) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
@@ -270,11 +318,52 @@ func merge_parts(parent: Node3D) -> void:
 	if mesh == null: return
 	var combined_material := StandardMaterial3D.new()
 	combined_material.albedo_color = Color.WHITE
+	combined_material.albedo_texture = _get_uniform_grain()
 	combined_material.vertex_color_use_as_albedo = true
 	combined_material.metallic = 0.18
 	combined_material.roughness = 0.7
+	combined_material.roughness_texture = _get_uniform_grain()
+	combined_material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+	combined_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	mesh.surface_set_material(0, combined_material)
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(instance)
+
+static func _get_uniform_grain() -> Texture2D:
+	if _uniform_grain:
+		return _uniform_grain
+	const RESOLUTION := 128
+	var image := Image.create(RESOLUTION, RESOLUTION, false, Image.FORMAT_RGBA8)
+	for y in RESOLUTION:
+		for x in RESOLUTION:
+			var u := float(x) / RESOLUTION
+			var v := float(y) / RESOLUTION
+			var broad := _tile_noise(u, v, 12, 13) - 0.5
+			var weave := _tile_noise(u, v, 44, 37) - 0.5
+			var grain := _tile_noise(u, v, 92, 91) - 0.5
+			var value := clampf(0.92 + broad * 0.22 + weave * 0.12 + grain * 0.08, 0.72, 1.04)
+			image.set_pixel(x, y, Color(value, value, value, 1.0))
+	_uniform_grain = ImageTexture.create_from_image(image)
+	_uniform_grain.resource_name = "Original procedural uniform grain"
+	return _uniform_grain
+
+static func _tile_noise(u: float, v: float, cells: int, salt: int) -> float:
+	var x := u * cells
+	var y := v * cells
+	var ix := floori(x)
+	var iy := floori(y)
+	var tx := x - floorf(x)
+	var ty := y - floorf(y)
+	tx = tx * tx * (3.0 - 2.0 * tx)
+	ty = ty * ty * (3.0 - 2.0 * ty)
+	var a := _grain_hash(posmod(ix, cells), posmod(iy, cells), salt)
+	var b := _grain_hash(posmod(ix + 1, cells), posmod(iy, cells), salt)
+	var c := _grain_hash(posmod(ix, cells), posmod(iy + 1, cells), salt)
+	var d := _grain_hash(posmod(ix + 1, cells), posmod(iy + 1, cells), salt)
+	return lerpf(lerpf(a, b, tx), lerpf(c, d, tx), ty)
+
+static func _grain_hash(x: int, y: int, salt: int) -> float:
+	var raw := sin(float(x * 127 + y * 311 + salt * 1973)) * 43758.5453
+	return raw - floorf(raw)
